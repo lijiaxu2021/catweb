@@ -1,0 +1,132 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}用户管理 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>用户管理</h2>
+</div>
+
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>注册时间</th>
+                        <th>角色</th>
+                        <th>文章数</th>
+                        <th class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" class="rounded-circle me-2" width="40" height="40" alt="{{ user.username }}">
+                                {{ user.username }}
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                                <span class="badge bg-danger">管理员</span>
+                            {% else %}
+                                <span class="badge bg-secondary">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.posts|length }}</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                {% if user.id != current_user.id %}
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleAdminModal({{ user.id }}, {% if user.is_admin %}false{% else %}true{% endif %}, '{{ user.username }}')">
+                                    {% if user.is_admin %}
+                                        <i class="fas fa-user"></i> 取消管理员
+                                    {% else %}
+                                        <i class="fas fa-user-shield"></i> 设为管理员
+                                    {% endif %}
+                                </button>
+                                
+                                <!-- 添加设置密码按钮 -->
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#setPasswordModal" onclick="prepareSetPassword({{ user.id }}, '{{ user.username }}')">
+                                    <i class="fas fa-key"></i> 设置密码
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 用户管理权限对话框中添加CSRF令牌 -->
+<form id="toggleAdminForm" method="post" action="{{ url_for('toggle_admin') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="user_id" id="toggleAdminUserId" value="">
+    <div class="modal-body">
+        <p>您确定要<span id="adminActionText"></span>此用户的管理员权限吗？</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary">确认</button>
+    </div>
+</form>
+
+<!-- 在页面底部添加设置密码模态框 -->
+<div class="modal fade" id="setPasswordModal" tabindex="-1" aria-labelledby="setPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title" id="setPasswordModalLabel">设置用户密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <form method="post" action="{{ url_for('admin_set_password') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="user_id" id="passwordUserId" value="">
+                
+                <div class="modal-body">
+                    <p>正在为用户 <strong id="passwordUsername"></strong> 设置新密码</p>
+                    
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                        <div class="form-text">密码至少需要6个字符</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">确认密码</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>警告：</strong> 更改用户密码是一项敏感操作，请确保您有合法权限执行此操作。
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary rounded-pill">保存更改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 添加准备设置密码的JavaScript函数 -->
+<script>
+    function prepareSetPassword(userId, username) {
+        document.getElementById('passwordUserId').value = userId;
+        document.getElementById('passwordUsername').textContent = username;
+    }
+</script>
+{% endblock %} 

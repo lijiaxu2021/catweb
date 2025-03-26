@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}搜索: {{ query }} - blue_cat_'WEB{% endblock %}
+
+{% block content %}
+<div class="apple-page-transition" id="pageTransition"></div>
+
+<div class="dynamic-bg" id="dynamicBg">
+    <div class="dynamic-circle" style="width: 400px; height: 400px; top: 20%; left: 10%;"></div>
+    <div class="dynamic-circle" style="width: 300px; height: 300px; top: 60%; left: 70%;"></div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card apple-card mb-4 apple-animate apple-stagger-1">
+                <div class="card-body">
+                    <h1 class="h4 mb-3">搜索结果: "{{ query }}"</h1>
+                    
+                    <div class="search-stats text-muted mb-4">
+                        找到 {{ total_results }} 个结果 ({{ search_time }} 秒)
+                    </div>
+                    
+                    <form action="{{ url_for('search') }}" method="get" class="mb-4">
+                        <div class="input-group">
+                            <input type="text" name="q" class="form-control rounded-start-4" value="{{ query }}" placeholder="搜索文章..." aria-label="搜索">
+                            <button class="btn btn-primary rounded-end-4" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    {% if posts %}
+                        <div class="search-filters mb-3">
+                            <span class="me-3">筛选条件:</span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('search', q=query, sort='relevance') }}" class="btn btn-outline-primary {% if request.args.get('sort') == 'relevance' or not request.args.get('sort') %}active{% endif %}">相关性</a>
+                                <a href="{{ url_for('search', q=query, sort='newest') }}" class="btn btn-outline-primary {% if request.args.get('sort') == 'newest' %}active{% endif %}">最新</a>
+                                <a href="{{ url_for('search', q=query, sort='oldest') }}" class="btn btn-outline-primary {% if request.args.get('sort') == 'oldest' %}active{% endif %}">最早</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if posts %}
+                {% for post in posts %}
+                <div class="card apple-card mb-3 hover-shadow apple-animate apple-stagger-{{ loop.index % 4 + 2 }}">
+                    <div class="card-body">
+                        <h2 class="h5 mb-2">
+                            <a href="{{ url_for('post', slug=post.slug) }}" class="text-decoration-none">{{ post.highlighted_title|safe }}</a>
+                        </h2>
+                        
+                        <div class="text-muted mb-2 small">
+                            <i class="far fa-calendar-alt"></i> {{ post.created_at.strftime('%Y-%m-%d') }}
+                            {% if post.category %}
+                            <span class="ms-3">
+                                <i class="fas fa-folder"></i> 
+                                <a href="{{ url_for('category', slug=post.category.slug) }}" class="text-decoration-none">{{ post.category.name }}</a>
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="card-text">{{ post.highlighted_summary|safe }}</p>
+                        
+                        <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-sm apple-btn">阅读全文 <i class="fas fa-angle-right ms-1"></i></a>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if pagination.pages > 1 %}
+                <nav aria-label="搜索结果页导航" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('search', q=query, page=pagination.prev_num) }}">上一页</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">上一页</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                            {% if page %}
+                                {% if page == pagination.page %}
+                                <li class="page-item active" aria-current="page">
+                                    <a class="page-link" href="#">{{ page }}</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('search', q=query, page=page) }}">{{ page }}</a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">...</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('search', q=query, page=pagination.next_num) }}">下一页</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="card apple-card text-center py-5 apple-animate apple-stagger-2">
+                    <div class="card-body">
+                        <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                        <h3 class="h4 mb-3">未找到相关结果</h3>
+                        <p class="text-muted">很抱歉，没有找到与"{{ query }}"相关的内容。</p>
+                        <div class="mt-3">
+                            <p class="small text-muted">尝试:</p>
+                            <ul class="list-unstyled text-muted">
+                                <li>• 检查搜索词的拼写</li>
+                                <li>• 尝试使用更短或更通用的关键词</li>
+                                <li>• 尝试使用同义词</li>
+                            </ul>
+                        </div>
+                        <a href="{{ url_for('index') }}" class="btn apple-btn mt-3">返回首页</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card apple-card mb-4 apple-animate apple-stagger-2">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">搜索帮助</h5>
+                    <div class="search-tips">
+                        <p class="text-muted mb-2">提示:</p>
+                        <ul class="text-muted small mb-0">
+                            <li>搜索文章标题、内容和标签</li>
+                            <li>使用完整词组获取更准确的结果</li>
+                            <li>尝试相关的关键词以扩大搜索范围</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card apple-card mb-4 apple-animate apple-stagger-3">
+                <div class="card-header">热门标签</div>
+                <div class="card-body">
+                    <div class="tag-cloud">
+                        {% for tag in tags %}
+                        <a href="{{ url_for('tag', slug=tag.slug) }}" class="badge bg-light text-dark text-decoration-none">{{ tag.name }} ({{ tag.posts|length }})</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card apple-card apple-animate apple-stagger-4">
+                <div class="card-header">热门文章</div>
+                <div class="list-group list-group-flush">
+                    {% for popular_post in popular_posts %}
+                    <a href="{{ url_for('post', slug=popular_post.slug) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ popular_post.title }}</h6>
+                        </div>
+                        <small class="text-muted">
+                            <i class="far fa-eye"></i> {{ popular_post.views or 0 }}
+                            <i class="far fa-comment ms-2"></i> {{ popular_post.comments|length }}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 苹果风格的页面转场效果
+    const pageTransition = document.getElementById('pageTransition');
+    
+    // 延迟显示页面内容
+    setTimeout(() => {
+        pageTransition.classList.add('hide');
+        setTimeout(() => pageTransition.remove(), 800);
+    }, 300);
+    
+    // 动态背景效果
+    const dynamicBg = document.getElementById('dynamicBg');
+    const circles = document.querySelectorAll('.dynamic-circle');
+    
+    // 随鼠标移动背景
+    document.addEventListener('mousemove', function(e) {
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        
+        circles.forEach((circle, index) => {
+            const offsetX = (index === 0) ? -15 : 15;
+            const offsetY = (index === 0) ? -10 : 10;
+            
+            circle.style.transform = `translate(${offsetX * x}px, ${offsetY * y}px)`;
+        });
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}标签 - blue_cat_'WEB{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="mb-0">标签列表</h1>
+            <p class="text-muted">所有文章标签分类</p>
+        </div>
+        <div class="col-md-6">
+            <form method="get" action="{{ url_for('tags_list') }}" class="d-flex">
+                <input type="text" name="q" class="form-control rounded-pill me-2" placeholder="搜索标签..." value="{{ query }}">
+                <button type="submit" class="btn btn-primary rounded-pill">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if tags %}
+            {% for tag in tags %}
+            <div class="col-md-4 col-lg-3 mb-4">
+                <div class="card rounded-4 shadow-sm h-100 border-0 tag-card" style="border-left: 4px solid {{ tag.random_color }} !important;">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-3">
+                            <a href="{{ url_for('tag', slug=tag.slug) }}" class="text-decoration-none" style="color: {{ tag.random_color }}">{{ tag.name }}</a>
+                        </h5>
+                        <div class="badge rounded-pill mb-2" style="background-color: {{ tag.random_color }}">{{ tag.post_count }} 篇文章</div>
+                        <a href="{{ url_for('tag', slug=tag.slug) }}" class="btn btn-sm btn-outline-primary rounded-pill mt-2">
+                            浏览文章
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <div class="text-muted">
+                    <i class="fas fa-tags fa-3x mb-3"></i>
+                    <h5>没有找到相关标签</h5>
+                    {% if query %}
+                    <p>试试其他关键词，或者 <a href="{{ url_for('tags_list') }}">查看所有标签</a></p>
+                    {% else %}
+                    <p>当前还没有添加任何标签</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

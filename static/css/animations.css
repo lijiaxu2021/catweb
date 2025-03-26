@@ -1,0 +1,155 @@
+/* 全局动画效果 */
+:root {
+  --transition-standard: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-decelerate: all 0.8s cubic-bezier(0, 0, 0.2, 1);
+  --transition-accelerate: all 0.5s cubic-bezier(0.4, 0, 1, 1);
+  --transition-sharp: all 0.4s cubic-bezier(0.4, 0, 0.6, 1);
+  --transition-bounce: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 页面过渡效果 */
+.page-transition {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  z-index: 9999;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 1s ease-out;
+}
+
+.page-transition.hide {
+  opacity: 0;
+}
+
+/* 元素进入视图动画 */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: var(--transition-standard);
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 交互反馈效果 */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple:after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+}
+
+.ripple:active:after {
+  transform: scale(0, 0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* 卡片悬浮效果 */
+.hover-float {
+  transition: var(--transition-bounce);
+}
+
+.hover-float:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(0, 50, 100, 0.1);
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 渐变背景动画 */
+.gradient-bg {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradient 25s ease infinite;
+  transition: all 0.3s ease;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 加载指示器动画 */
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(0, 123, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #007bff;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 修复导航栏下拉菜单被遮挡的问题 */
+.navbar {
+  z-index: 1030;
+}
+
+.navbar .dropdown-menu {
+  z-index: 1035;
+}
+
+/* 确保导航栏本身不受滚动动画影响 */
+.navbar.animate-on-scroll {
+  opacity: 1;
+  transform: none;
+}
+
+/* 调整下拉菜单显示 */
+.dropdown-menu {
+  margin-top: 0.5rem;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 滚动驱动的动画 */
+.scroll-animate {
+  --scroll-percent: 0%;
+  transition: all 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-fade {
+  opacity: calc(var(--scroll-percent) / 100);
+}
+
+.scroll-slide-up {
+  transform: translateY(calc((100 - var(--scroll-percent)) * 0.5px));
+}
+
+.scroll-scale {
+  transform: scale(calc(0.8 + (var(--scroll-percent) * 0.002)));
+}
+
+.scroll-rotate {
+  transform: rotate(calc(var(--scroll-percent) * 3.6deg));
+} 

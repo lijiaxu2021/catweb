@@ -1,0 +1,209 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}称号管理 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>称号管理</h2>
+    <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#addTitleModal">
+        <i class="fas fa-plus me-1"></i>添加称号
+    </button>
+</div>
+
+<!-- 称号列表 -->
+<div class="card rounded-4 shadow-sm mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>预览</th>
+                        <th>名称</th>
+                        <th>颜色</th>
+                        <th>用户数</th>
+                        <th class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for title in titles %}
+                    <tr>
+                        <td>{{ title.id }}</td>
+                        <td><span class="badge" style="background-color: {{ title.color }}">{{ title.name }}</span></td>
+                        <td>
+                            <span class="badge" style="background-color: {{ title.color }}; min-width: 80px; display: inline-block;">{{ title.name }}</span>
+                        </td>
+                        <td><span class="color-preview" style="display: inline-block; width: 20px; height: 20px; background-color: {{ title.color }}; border-radius: 4px;"></span> {{ title.color }}</td>
+                        <td>{{ title.users|length }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editTitleModal{{ title.id }}">编辑</button>
+                                <form action="{{ url_for('admin_titles') }}" method="post" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="title_id" value="{{ title.id }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- 编辑称号模态框 -->
+                    <div class="modal fade" id="editTitleModal{{ title.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content rounded-4">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">编辑称号</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form method="post" action="{{ url_for('admin_titles') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="action" value="edit">
+                                    <input type="hidden" name="title_id" value="{{ title.id }}">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="editTitleName{{ title.id }}" class="form-label">称号名称</label>
+                                            <input type="text" class="form-control rounded-pill" id="editTitleName{{ title.id }}" name="name" value="{{ title.name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="editTitleColor{{ title.id }}" class="form-label">称号颜色</label>
+                                            <div class="input-group">
+                                                <input type="color" class="form-control form-control-color" id="editTitleColor{{ title.id }}" name="color" value="{{ title.color }}" title="选择称号颜色">
+                                                <input type="text" class="form-control rounded-end" value="{{ title.color }}" aria-label="色值" id="editTitleColorText{{ title.id }}">
+                                            </div>
+                                            <div class="form-text">预览: <span class="badge" style="background-color: {{ title.color }}" id="editTitlePreview{{ title.id }}">{{ title.name }}</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">取消</button>
+                                        <button type="submit" class="btn btn-primary rounded-pill">保存</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 添加称号模态框 -->
+<div class="modal fade" id="addTitleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title">添加称号</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_titles') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="add">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="titleName" class="form-label">称号名称</label>
+                        <input type="text" class="form-control rounded-pill" id="titleName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="titleColor" class="form-label">称号颜色</label>
+                        <div class="input-group">
+                            <input type="color" class="form-control form-control-color" id="titleColor" name="color" value="#007bff" title="选择称号颜色">
+                            <input type="text" class="form-control rounded-end" value="#007bff" aria-label="色值" id="titleColorText">
+                        </div>
+                        <div class="form-text">预览: <span class="badge bg-primary" id="titlePreview">称号预览</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary rounded-pill">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 避免初始化模态框时的闪烁
+        setTimeout(function() {
+            // 首先将所有模态框设置为不可见
+            document.querySelectorAll('.modal').forEach(function(modal) {
+                modal.style.visibility = 'hidden';
+                modal.style.display = 'none';
+            });
+            
+            // 然后再初始化
+            setTimeout(function() {
+                var modals = document.querySelectorAll('.modal');
+                modals.forEach(function(modal) {
+                    var modalInstance = new bootstrap.Modal(modal, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+                    
+                    // 恢复可见性设置
+                    modal.style.visibility = '';
+                });
+                
+                document.body.classList.add('modal-initialized');
+                
+                // 新增称号颜色同步
+                const titleColor = document.getElementById('titleColor');
+                const titleColorText = document.getElementById('titleColorText');
+                const titlePreview = document.getElementById('titlePreview');
+                const titleName = document.getElementById('titleName');
+                
+                if (titleColor && titleColorText && titlePreview && titleName) {
+                    titleColor.addEventListener('input', function() {
+                        titleColorText.value = this.value;
+                        titlePreview.style.backgroundColor = this.value;
+                    });
+                    
+                    titleColorText.addEventListener('input', function() {
+                        if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                            titleColor.value = this.value;
+                            titlePreview.style.backgroundColor = this.value;
+                        }
+                    });
+                    
+                    titleName.addEventListener('input', function() {
+                        titlePreview.textContent = this.value || '称号预览';
+                    });
+                }
+                
+                // 编辑称号颜色同步
+                {% for title in titles %}
+                const editTitleColor{{ title.id }} = document.getElementById('editTitleColor{{ title.id }}');
+                const editTitleColorText{{ title.id }} = document.getElementById('editTitleColorText{{ title.id }}');
+                const editTitlePreview{{ title.id }} = document.getElementById('editTitlePreview{{ title.id }}');
+                const editTitleName{{ title.id }} = document.getElementById('editTitleName{{ title.id }}');
+                
+                if (editTitleColor{{ title.id }} && editTitleColorText{{ title.id }} && editTitlePreview{{ title.id }} && editTitleName{{ title.id }}) {
+                    editTitleColor{{ title.id }}.addEventListener('input', function() {
+                        editTitleColorText{{ title.id }}.value = this.value;
+                        editTitlePreview{{ title.id }}.style.backgroundColor = this.value;
+                    });
+                    
+                    editTitleColorText{{ title.id }}.addEventListener('input', function() {
+                        if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                            editTitleColor{{ title.id }}.value = this.value;
+                            editTitlePreview{{ title.id }}.style.backgroundColor = this.value;
+                        }
+                    });
+                    
+                    editTitleName{{ title.id }}.addEventListener('input', function() {
+                        editTitlePreview{{ title.id }}.textContent = this.value;
+                    });
+                }
+                {% endfor %}
+            }, 100);
+        }, 100);
+    });
+</script>
+{% endblock %} 

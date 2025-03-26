@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}我的文章 - 测试博客{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>我的文章</h2>
+    <a href="{{ url_for('create_post') }}" class="btn btn-primary rounded-pill">
+        <i class="fas fa-plus me-1"></i>写新文章
+    </a>
+</div>
+
+{% if posts %}
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>分类</th>
+                    <th>状态</th>
+                    <th>发布时间</th>
+                    <th>浏览量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('post', slug=post.slug) }}" class="text-decoration-none">{{ post.title }}</a>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary rounded-pill">{{ post.category.name }}</span>
+                    </td>
+                    <td>
+                        {% if post.published %}
+                            <span class="badge bg-success">已发布</span>
+                        {% else %}
+                            <span class="badge bg-secondary">草稿</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ post.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ post.views }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('edit_post', id=post.id) }}" class="btn btn-outline-primary">编辑</a>
+                            <a href="{{ url_for('delete_post', id=post.id) }}" class="btn btn-outline-danger" onclick="return confirm('确定要删除这篇文章吗？')">删除</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="far fa-file-alt fa-3x mb-3"></i>
+        <p>您还没有发布任何文章</p>
+        <a href="{{ url_for('create_post') }}" class="btn btn-primary rounded-pill mt-3">立即写文章</a>
+    </div>
+{% endif %}
+{% endblock %} 

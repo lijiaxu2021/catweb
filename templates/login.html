@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}登录 - blue_cat_'WEB{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card rounded-4 shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">登录账户</h3>
+                
+                <form method="post" action="{{ url_for('login') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id }}" class="form-label">{{ form.username.label }}</label>
+                        {{ form.username(class="form-control rounded-pill", placeholder="请输入用户名") }}
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.username.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password.id }}" class="form-label">{{ form.password.label }}</label>
+                        {{ form.password(class="form-control rounded-pill", placeholder="请输入密码") }}
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4 form-check">
+                        {{ form.remember(class="form-check-input") }}
+                        <label class="form-check-label" for="{{ form.remember.id }}">{{ form.remember.label }}</label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary rounded-pill py-2") }}
+                    </div>
+                </form>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('forgot_password') }}" class="text-decoration-none">忘记密码？</a>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-3">还没有账号？</p>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary rounded-pill">立即注册</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

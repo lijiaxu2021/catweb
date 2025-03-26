@@ -1,0 +1,75 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}分类管理 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>分类管理</h2>
+    <button type="button" class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <i class="fas fa-plus me-1"></i>添加分类
+    </button>
+</div>
+
+<!-- 分类列表 -->
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>别名</th>
+                        <th>文章数</th>
+                        <th class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.id }}</td>
+                        <td>{{ category.name }}</td>
+                        <td>{{ category.slug }}</td>
+                        <td>{{ category.posts.count() }}</td>
+                        <td class="text-end">
+                            <form action="{{ url_for('admin_delete_category', id=category.id) }}" method="post" class="d-inline">
+                                {{ csrf_token()|safe }}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要删除此分类吗？')">
+                                    <i class="fas fa-trash-alt"></i> 删除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 添加分类模态框 -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCategoryModalLabel">添加新分类</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('manage_categories') }}">
+                {{ csrf_token() }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">分类名称</label>
+                        <input type="text" class="form-control rounded-pill" id="name" name="name" required>
+                        <div class="form-text">分类的别名会自动生成</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary rounded-pill">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑文章 - 测试博客{% endblock %}
+
+{% block extra_css %}
+{{ ckeditor.load() }}
+{{ ckeditor.config(name='content', custom_config={
+    'extraPlugins': 'uploadimage,image2',
+    'uploadUrl': '/upload',
+    'filebrowserUploadUrl': '/upload?type=Files',
+    'filebrowserImageUploadUrl': '/upload?type=Images'
+}) }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">编辑文章</h1>
+    
+    <div class="card rounded-4 shadow-sm">
+        <div class="card-body p-4">
+            <form method="post" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    <label for="{{ form.title.id }}" class="form-label">{{ form.title.label }}</label>
+                    {{ form.title(class="form-control rounded-pill") }}
+                    {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.title.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.summary.id }}" class="form-label">{{ form.summary.label }}</label>
+                    {{ form.summary(class="form-control rounded-3", rows=3) }}
+                    <div class="form-text">如果留空，将自动从文章内容截取</div>
+                    {% if form.summary.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.summary.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.category_id.id }}" class="form-label">{{ form.category_id.label }}</label>
+                    {{ form.category_id(class="form-select rounded-pill") }}
+                    {% if form.category_id.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.category_id.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.tags.id }}" class="form-label">{{ form.tags.label }}</label>
+                    {{ form.tags(class="form-control rounded-pill") }}
+                    <div class="form-text">多个标签请用逗号分隔</div>
+                    {% if form.tags.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.tags.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">特色图片</label>
+                    <div class="mb-2">
+                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" alt="{{ post.title }}" class="img-thumbnail" style="max-height: 150px;">
+                    </div>
+                    <input type="file" class="form-control rounded-pill" name="featured_image">
+                    <div class="form-text">支持JPG、PNG、GIF格式，建议尺寸800x400。如不上传则保持原图</div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.content.id }}" class="form-label">{{ form.content.label }}</label>
+                    {{ form.content(class="ckeditor") }}
+                    {% if form.content.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.content.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4 form-check">
+                    {{ form.published(class="form-check-input") }}
+                    <label class="form-check-label" for="{{ form.published.id }}">{{ form.published.label }}</label>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('my_posts') }}" class="btn btn-outline-secondary rounded-pill px-4">返回</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">{{ form.submit.label }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

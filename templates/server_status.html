@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}服务器状态 - blue_cat_'WEB{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4 display-5">服务器状态仪表盘</h1>
+    
+    <!-- 实时显示器 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card rounded-4 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">CPU 使用率</h5>
+                    <div class="progress mb-2" style="height: 30px;">
+                        <div id="cpu-progress" class="progress-bar bg-primary" role="progressbar" 
+                             style="width: {{ cpu_info.cpu_percent }}%;" 
+                             aria-valuenow="{{ cpu_info.cpu_percent }}" aria-valuemin="0" aria-valuemax="100">
+                            <span id="cpu-text">{{ cpu_info.cpu_percent }}%</span>
+                        </div>
+                    </div>
+                    <p class="text-muted">处理器: {{ system_info.processor }}</p>
+                    <p class="text-muted">核心数: {{ cpu_info.cpu_count }}</p>
+                    <p class="text-muted">频率: {{ cpu_info.cpu_freq }} MHz</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card rounded-4 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">内存使用率</h5>
+                    <div class="progress mb-2" style="height: 30px;">
+                        <div id="memory-progress" class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ memory_info.percent }}%;" 
+                             aria-valuenow="{{ memory_info.percent }}" aria-valuemin="0" aria-valuemax="100">
+                            <span id="memory-text">{{ memory_info.percent }}%</span>
+                        </div>
+                    </div>
+                    <p class="text-muted">总内存: {{ memory_info.total }} GB</p>
+                    <p class="text-muted">已用内存: {{ memory_info.used }} GB</p>
+                    <p class="text-muted">可用内存: {{ memory_info.available }} GB</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card rounded-4 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">网络状态</h5>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-3">
+                            <i id="ping-icon" class="fas fa-circle text-success fa-2x"></i>
+                        </div>
+                        <div>
+                            <h3 id="ping-time" class="mb-0">{{ ping_time }}</h3>
+                            <small class="text-muted">延迟 (ms)</small>
+                        </div>
+                    </div>
+                    <p class="text-muted">主机名: {{ system_info.hostname }}</p>
+                    <p class="text-muted">系统运行时间: {{ uptime }}</p>
+                    <p class="text-muted">操作系统: {{ system_info.system }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 实时图表 -->
+    <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">系统资源使用情况</h5>
+            <canvas id="resourceChart" height="80"></canvas>
+        </div>
+    </div>
+    
+    <!-- 服务状态 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card rounded-4 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">服务状态</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for service in services %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ service.name }}</span>
+                            <div>
+                                {% if service.status == 'running' %}
+                                <span class="badge bg-success rounded-pill">正常运行</span>
+                                {% else %}
+                                <span class="badge bg-danger rounded-pill">异常</span>
+                                {% endif %}
+                                <small class="text-muted ms-2">已运行: {{ service.uptime }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card rounded-4 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">应用统计</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>应用版本</span>
+                            <span class="badge bg-primary rounded-pill">{{ app_info.version }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>用户数量</span>
+                            <span class="badge bg-info rounded-pill">{{ app_info.user_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>文章数量</span>
+                            <span class="badge bg-success rounded-pill">{{ app_info.post_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>评论数量</span>
+                            <span class="badge bg-warning rounded-pill">{{ app_info.comment_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Python版本</span>
+                            <span class="badge bg-secondary rounded-pill">{{ system_info.python_version }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 磁盘使用情况 -->
+    <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">磁盘使用情况</h5>
+        </div>
+        <div class="card-body">
+            <h6>主硬盘</h6>
+            <div class="progress mb-3" style="height: 25px;">
+                <div class="progress-bar bg-info" role="progressbar" 
+                     style="width: {{ disk_info.percent }}%;" 
+                     aria-valuenow="{{ disk_info.percent }}" aria-valuemin="0" aria-valuemax="100">
+                    {{ disk_info.percent }}%
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <p class="text-muted">总容量: {{ disk_info.total }} GB</p>
+                </div>
+                <div class="col-md-4">
+                    <p class="text-muted">已用空间: {{ disk_info.used }} GB</p>
+                </div>
+                <div class="col-md-4">
+                    <p class="text-muted">剩余空间: {{ disk_info.free }} GB</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 顶部进程 -->
+    <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">占用资源最多的进程</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>进程名</th>
+                            <th>用户</th>
+                            <th>CPU %</th>
+                            <th>内存 %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proc in processes %}
+                        <tr>
+                            <td>{{ proc.pid }}</td>
+                            <td>{{ proc.name }}</td>
+                            <td>{{ proc.username }}</td>
+                            <td>{{ proc.cpu_percent }}%</td>
+                            <td>{{ proc.memory_percent }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 资源图表初始化
+    const ctx = document.getElementById('resourceChart').getContext('2d');
+    const resourceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [
+                '{{ current_time }}'
+            ],
+            datasets: [{
+                label: 'CPU 使用率 (%)',
+                data: [{{ cpu_info.cpu_percent }}],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderWidth: 2,
+                tension: 0.2
+            }, {
+                label: '内存使用率 (%)',
+                data: [{{ memory_info.percent }}],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 2,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            animation: {
+                duration: 500
+            }
+        }
+    });
+    
+    // 实时更新数据
+    function updateStats() {
+        fetch('/api/system-stats')
+            .then(response => response.json())
+            .then(data => {
+                // 更新进度条
+                document.getElementById('cpu-progress').style.width = data.cpu + '%';
+                document.getElementById('cpu-text').innerText = data.cpu + '%';
+                document.getElementById('memory-progress').style.width = data.memory + '%';
+                document.getElementById('memory-text').innerText = data.memory + '%';
+                
+                // 更新图表
+                resourceChart.data.labels.push(data.timestamp);
+                resourceChart.data.datasets[0].data.push(data.cpu);
+                resourceChart.data.datasets[1].data.push(data.memory);
+                
+                // 保持最近30个数据点
+                if (resourceChart.data.labels.length > 30) {
+                    resourceChart.data.labels.shift();
+                    resourceChart.data.datasets[0].data.shift();
+                    resourceChart.data.datasets[1].data.shift();
+                }
+                
+                resourceChart.update();
+            });
+    }
+    
+    // 每1秒更新一次
+    setInterval(updateStats, 1000);
+</script>
+{% endblock %} 

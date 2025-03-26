@@ -1,0 +1,194 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/base.html' import csrf %}
+
+{% block title %}{{ form_title }} - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>{{ form_title }}</h2>
+    <a href="{{ url_for('admin_messages') }}" class="btn btn-secondary rounded-pill">
+        <i class="fas fa-arrow-left me-1"></i>返回列表
+    </a>
+</div>
+
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body">
+        <form method="post" action="">
+            {{ csrf() }}
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i>消息类型说明</h5>
+                        <ul class="mb-0">
+                            <li><strong>常规消息</strong>：只向每位用户显示一次，用户阅读后不再显示。</li>
+                            <li><strong>登录触发</strong>：每次用户登录时显示一次，下次登录会再次显示。</li>
+                            <li><strong>注册触发</strong>：仅在用户注册后首次登录时显示一次。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="form-group mb-3">
+                        <label for="title" class="form-label">消息标题 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{{ message.title if message else '' }}" required>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="content" class="form-label">消息内容 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="content" name="content" rows="5" required>{{ message.content if message else '' }}</textarea>
+                        <div class="form-text">支持HTML格式</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="form-group mb-3">
+                        <label for="type" class="form-label">消息类型</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="info" {% if message and message.type == 'info' %}selected{% endif %}>信息 (蓝色)</option>
+                            <option value="success" {% if message and message.type == 'success' %}selected{% endif %}>成功 (绿色)</option>
+                            <option value="warning" {% if message and message.type == 'warning' %}selected{% endif %}>警告 (黄色)</option>
+                            <option value="danger" {% if message and message.type == 'danger' %}selected{% endif %}>危险 (红色)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="icon" class="form-label">消息图标</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i id="iconPreview" class="{{ message.icon if message else 'fas fa-bell' }}"></i></span>
+                            <input type="text" class="form-control" id="icon" name="icon" 
+                                   value="{{ message.icon if message else 'fas fa-bell' }}">
+                        </div>
+                        <div class="form-text">使用Font Awesome图标类名</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="display_duration" class="form-label">显示时长 (毫秒)</label>
+                        <input type="number" class="form-control" id="display_duration" name="display_duration" 
+                               value="{{ message.display_duration if message else 5000 }}" min="1000" step="1000">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5 class="border-bottom pb-2 mb-3">发送设置</h5>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="trigger_on_login" name="trigger_on_login"
+                               {% if message and message.trigger_on_login %}checked{% endif %}>
+                        <label class="form-check-label" for="trigger_on_login">登录时触发</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="trigger_on_registration" name="trigger_on_registration"
+                               {% if message and message.trigger_on_registration %}checked{% endif %}>
+                        <label class="form-check-label" for="trigger_on_registration">注册后触发</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="for_guests" name="for_guests"
+                               {% if message and message.for_guests %}checked{% endif %}>
+                        <label class="form-check-label" for="for_guests">游客可见</label>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="scheduled_time" class="form-label">定时发送</label>
+                        <input type="datetime-local" class="form-control" id="scheduled_time" name="scheduled_time"
+                               value="{{ message.scheduled_time.strftime('%Y-%m-%dT%H:%M') if message and message.scheduled_time else '' }}">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="expiry_time" class="form-label">过期时间</label>
+                        <input type="datetime-local" class="form-control" id="expiry_time" name="expiry_time"
+                               value="{{ message.expiry_time.strftime('%Y-%m-%dT%H:%M') if message and message.expiry_time else '' }}">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5 class="border-bottom pb-2 mb-3">高级设置</h5>
+                    
+                    <div class="form-group mb-3">
+                        <label for="max_display_count" class="form-label">显示次数限制</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="max_display_count" name="max_display_count" 
+                                   value="{{ message.max_display_count if message else 1 }}" min="1" max="100">
+                            <span class="input-group-text">次</span>
+                        </div>
+                        <div class="form-text">设置该消息向每个用户最多显示的次数，默认为1次（只显示一次）</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-top pt-3 text-end">
+                <a href="{{ url_for('admin_messages') }}" class="btn btn-secondary me-2">取消</a>
+                <button type="submit" class="btn btn-primary">保存消息</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 消息预览 -->
+<div class="card rounded-4 shadow-sm mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">消息预览</h5>
+    </div>
+    <div class="card-body">
+        <div id="message-preview" class="alert alert-info">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i id="preview-icon" class="fas fa-bell fa-2x"></i>
+                </div>
+                <div>
+                    <h4 id="preview-title" class="alert-heading">消息标题</h4>
+                    <p id="preview-content" class="mb-0">消息内容将显示在这里</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 实时更新预览
+    document.addEventListener('DOMContentLoaded', function() {
+        const titleInput = document.getElementById('title');
+        const contentInput = document.getElementById('content');
+        const typeSelect = document.getElementById('type');
+        const iconInput = document.getElementById('icon');
+        
+        const previewTitle = document.getElementById('preview-title');
+        const previewContent = document.getElementById('preview-content');
+        const previewIcon = document.getElementById('preview-icon');
+        const messagePreview = document.getElementById('message-preview');
+        const iconPreview = document.getElementById('iconPreview');
+        
+        function updatePreview() {
+            previewTitle.textContent = titleInput.value || '消息标题';
+            previewContent.innerHTML = contentInput.value || '消息内容将显示在这里';
+            
+            // 更新图标
+            const iconClass = iconInput.value || 'fas fa-bell';
+            previewIcon.className = iconClass + ' fa-2x';
+            iconPreview.className = iconClass;
+            
+            // 更新类型（颜色）
+            const type = typeSelect.value || 'info';
+            messagePreview.className = `alert alert-${type}`;
+        }
+        
+        // 绑定事件
+        titleInput.addEventListener('input', updatePreview);
+        contentInput.addEventListener('input', updatePreview);
+        typeSelect.addEventListener('change', updatePreview);
+        iconInput.addEventListener('input', updatePreview);
+        
+        // 初始化预览
+        updatePreview();
+    });
+</script>
+{% endblock %} 

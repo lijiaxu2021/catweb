@@ -1,0 +1,147 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}用户权限管理 - 管理后台{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>用户权限管理</h2>
+    <div>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i> 返回用户管理
+        </a>
+    </div>
+</div>
+
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> 
+            <strong>权限说明：</strong>
+            <ul class="mb-0 mt-2">
+                <li>管理员：可以访问管理后台，管理所有内容</li>
+                <li>普通用户：只能管理自己的内容，无法访问管理后台</li>
+                <li>超级管理员和您自己的权限不能被修改</li>
+            </ul>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>头像</th>
+                        <th>注册时间</th>
+                        <th>文章数</th>
+                        <th>权限</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>
+                            <a href="{{ url_for('user_profile', username=user.username) }}" target="_blank">
+                                {{ user.username }}
+                                {% if user.id == current_user.id %}
+                                <span class="badge bg-info ms-1">当前用户</span>
+                                {% endif %}
+                                {% if user.id == 1 %}
+                                <span class="badge bg-danger ms-1">超级管理员</span>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td>
+                            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" class="rounded-circle" width="40" height="40" alt="{{ user.username }}">
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ user.posts|length }}</td>
+                        <td>
+                            {% if user.is_admin %}
+                            <span class="badge bg-success">管理员</span>
+                            {% else %}
+                            <span class="badge bg-secondary">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form action="{{ url_for('update_permissions_no_csrf', user_id=user.id) }}" method="post" class="d-inline">
+                                <div class="form-check form-switch d-inline-flex align-items-center">
+                                    <input class="form-check-input me-2" type="checkbox" id="is_admin_{{ user.id }}" name="is_admin" 
+                                           {% if user.is_admin %}checked{% endif %}
+                                           onchange="this.form.submit()"
+                                           {% if user.id == 1 or user.id == current_user.id %}disabled{% endif %}>
+                                    <label class="form-check-label" for="is_admin_{{ user.id }}">
+                                        管理员权限
+                                    </label>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 权限变更历史 -->
+<div class="card rounded-4 shadow-sm mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">最近权限变更记录</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>管理员</th>
+                        <th>操作</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set permission_logs = logs|selectattr('action', 'equalto', 'update_permission')|list %}
+                    {% if permission_logs %}
+                        {% for log in permission_logs[:10] %}
+                        <tr>
+                            <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ log.user.username if log.user else '系统' }}</td>
+                            <td><span class="badge bg-info">权限变更</span></td>
+                            <td>{{ log.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center">暂无权限变更记录</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 添加确认对话框
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                const checkbox = form.querySelector('input[type="checkbox"]');
+                const username = form.closest('tr').querySelector('td:nth-child(2)').textContent.trim();
+                const newStatus = checkbox.checked ? '管理员' : '普通用户';
+                
+                if (!confirm(`确定将 ${username} 的权限设置为 ${newStatus} 吗？`)) {
+                    event.preventDefault();
+                    // 还原复选框状态
+                    checkbox.checked = !checkbox.checked;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 

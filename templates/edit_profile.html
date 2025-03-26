@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑个人资料 - 博客{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card rounded-4 shadow-sm animate-on-scroll">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">编辑个人资料</h3>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3 text-center">
+                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                                alt="{{ current_user.username }}" class="rounded-circle img-thumbnail mb-3" 
+                                style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control rounded-pill" id="username" value="{{ current_user.username }}" disabled>
+                            <div class="form-text">用户名不可修改</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control rounded-pill") }}
+                            {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.email.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.bio.label(class="form-label") }}
+                            {{ form.bio(class="form-control rounded-3", rows=3) }}
+                            {% if form.bio.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.bio.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">简单介绍一下自己吧，最多200字</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.profile_pic.label(class="form-label") }}
+                            {{ form.profile_pic(class="form-control rounded-pill") }}
+                            {% if form.profile_pic.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.profile_pic.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">支持JPG、PNG、GIF格式，建议使用正方形图片</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('user_profile', username=current_user.username) }}" class="btn btn-outline-secondary rounded-pill me-md-2">
+                                取消
+                            </a>
+                            {{ form.submit(class="btn btn-primary rounded-pill") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

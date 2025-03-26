@@ -1,0 +1,34 @@
+/* 修复 CKEditor 显示问题 */
+.cke_chrome {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+}
+
+.cke_top, .cke_bottom, .cke_contents {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+}
+
+/* 强制设置内容区高度 */
+.cke_contents {
+    height: 800px !important;
+    min-height: 800px !important;
+}
+
+/* 强制设置iframe高度 */
+.cke_wysiwyg_frame, 
+.cke_wysiwyg_div {
+    height: 800px !important;
+    min-height: 800px !important;
+}
+
+.cke_reset {
+    visibility: visible !important;
+}
+
+/* 防止其他元素覆盖编辑器 */
+.cke_chrome {
+    z-index: 10000 !important;
+} 

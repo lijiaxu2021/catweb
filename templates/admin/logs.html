@@ -1,0 +1,414 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}系统日志 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>系统日志</h2>
+</div>
+
+<!-- 数据统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center">
+                <div class="text-muted">总日志数</div>
+                <h3 class="mt-2 mb-0">{{ stats.total }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center">
+                <div class="text-muted">用户日志</div>
+                <h3 class="mt-2 mb-0">{{ stats.user }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center">
+                <div class="text-muted">文章日志</div>
+                <h3 class="mt-2 mb-0">{{ stats.article }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center">
+                <div class="text-muted">系统日志</div>
+                <h3 class="mt-2 mb-0">{{ stats.system }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center">
+                <div class="text-muted">HTTP日志</div>
+                <h3 class="mt-2 mb-0">{{ stats.http }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日志筛选 -->
+<div class="card rounded-4 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" action="{{ url_for('admin_logs') }}" class="row g-3">
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="type">日志类型</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">全部</option>
+                        <option value="user" {% if type_filter == 'user' %}selected{% endif %}>用户</option>
+                        <option value="article" {% if type_filter == 'article' %}selected{% endif %}>文章</option>
+                        <option value="system" {% if type_filter == 'system' %}selected{% endif %}>系统</option>
+                        <option value="http" {% if type_filter == 'http' %}selected{% endif %}>HTTP</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="action">操作</label>
+                    <select class="form-control" id="action" name="action">
+                        <option value="">所有操作</option>
+                        {% for action in unique_actions %}
+                        <option value="{{ action }}" {% if action == action_filter %}selected{% endif %}>{{ action }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="user">用户</label>
+                    <input type="text" class="form-control" id="user" name="user" value="{{ user_filter }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="ip">IP地址</label>
+                    <div class="input-group">
+                        <select class="form-select" id="ip" name="ip">
+                            <option value="">所有IP</option>
+                            {% for ip in unique_ips %}
+                            <option value="{{ ip }}" {% if ip == ip_filter %}selected{% endif %}>{{ ip }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#ipManualInput" aria-expanded="false">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="ipManualInput">
+                        <input type="text" class="form-control" id="ip_manual" placeholder="手动输入IP地址..." onchange="document.getElementById('ip').value=this.value">
+                        <div class="form-text small">手动输入可用于搜索部分IP地址</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 添加消息内容搜索 -->
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="message">日志内容</label>
+                    <input type="text" class="form-control" id="message" name="message" value="{{ message_filter }}" placeholder="搜索日志内容...">
+                </div>
+            </div>
+            
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </div>
+            
+            {% if type_filter or action_filter or user_filter or ip_filter or message_filter %}
+            <div class="col-12 mt-2">
+                <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times"></i> 清除筛选
+                </a>
+                <span class="ms-2 text-muted">当前筛选结果: {{ logs|length }} 条记录</span>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- 日志列表 -->
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th style="width: 100px;">类型</th>
+                        <th style="width: 150px;">操作</th>
+                        <th style="width: 150px;">用户</th>
+                        <th style="width: 150px;">IP地址</th>
+                        <th style="width: 180px;">时间</th>
+                        <th>消息</th>
+                        <th style="width: 80px;" class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>
+                            {% if log.type == 'user' %}
+                            <span class="badge bg-primary">用户</span>
+                            {% elif log.type == 'article' %}
+                            <span class="badge bg-success">文章</span>
+                            {% elif log.type == 'system' %}
+                            <span class="badge bg-warning">系统</span>
+                            {% elif log.type == 'http' %}
+                            <span class="badge bg-info">HTTP</span>
+                            {% else %}
+                            <span class="badge bg-secondary">其他</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.action }}</td>
+                        <td>
+                            {% if log.user %}
+                            <a href="{{ url_for('user_profile', username=log.user.username) }}" target="_blank" class="d-flex align-items-center text-decoration-none">
+                                <img src="{{ url_for('static', filename='uploads/' + log.user.profile_pic) }}" class="rounded-circle me-2" width="24" height="24" alt="{{ log.user.username }}">
+                                <span>{{ log.user.username }}</span>
+                            </a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.ip_address %}
+                            <a href="#" onclick="showIpInfo('{{ log.ip_address }}'); return false;">{{ log.ip_address }}</a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td class="log-message-cell">
+                            <div class="log-full-message">{{ log.message }}</div>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick="showLogDetail({{ log.id }})">
+                                详情
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 分页 -->
+{% if pagination.pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_logs', page=pagination.prev_num, type=type_filter, action=action_filter, user=user_filter, ip=ip_filter, message=message_filter) }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+            {% endif %}
+
+            {% for page in pagination.iter_pages() %}
+                {% if page %}
+                    {% if page != pagination.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_logs', page=page, type=type_filter, action=action_filter, user=user_filter, ip=ip_filter, message=message_filter) }}">{{ page }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ page }}</span>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_logs', page=pagination.next_num, type=type_filter, action=action_filter, user=user_filter, ip=ip_filter, message=message_filter) }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- 日志详情模态框 -->
+<div class="modal fade" id="logDetailModal" tabindex="-1" aria-labelledby="logDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailModalLabel">日志详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 100px">ID:</th>
+                                <td id="logDetailId"></td>
+                            </tr>
+                            <tr>
+                                <th>类型:</th>
+                                <td id="logDetailType"></td>
+                            </tr>
+                            <tr>
+                                <th>操作:</th>
+                                <td id="logDetailAction"></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 100px">用户:</th>
+                                <td id="logDetailUser"></td>
+                            </tr>
+                            <tr>
+                                <th>IP地址:</th>
+                                <td id="logDetailIp"></td>
+                            </tr>
+                            <tr>
+                                <th>时间:</th>
+                                <td id="logDetailTime"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <h6 class="mb-3">详细消息:</h6>
+                <div id="logDetailMessage" class="log-detail-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="copyLogBtn">复制消息</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IP信息模态框 -->
+<div class="modal fade" id="ipModal" tabindex="-1" aria-labelledby="ipModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ipModalLabel">IP地址详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- IP信息将在这里显示 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 复制日志消息
+    document.getElementById('copyLogBtn').addEventListener('click', function() {
+        const messageText = document.getElementById('logDetailMessage').textContent;
+        navigator.clipboard.writeText(messageText).then(function() {
+            alert('消息已复制到剪贴板');
+        }, function() {
+            alert('复制失败，请手动选择并复制');
+        });
+    });
+    
+    // 显示日志详情
+    function showLogDetail(logId) {
+        fetch(`/admin/api/logs/${logId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('logDetailId').textContent = data.id;
+                document.getElementById('logDetailType').textContent = data.type;
+                document.getElementById('logDetailAction').textContent = data.action;
+                document.getElementById('logDetailUser').innerHTML = data.user ? `<a href="/user/${data.user.username}" target="_blank">${data.user.username}</a>` : '-';
+                document.getElementById('logDetailIp').innerHTML = data.ip ? `<a href="#" onclick="showIpInfo('${data.ip}'); return false;">${data.ip}</a>` : '-';
+                document.getElementById('logDetailTime').textContent = data.created_at;
+                
+                const messageElement = document.getElementById('logDetailMessage');
+                messageElement.innerHTML = ''; // 清空现有内容
+                
+                if (data.message) {
+                    // 创建pre元素以保留格式
+                    const preElement = document.createElement('pre');
+                    preElement.className = 'mb-0';
+                    preElement.textContent = data.message;
+                    messageElement.appendChild(preElement);
+                } else {
+                    messageElement.textContent = '(无消息内容)';
+                }
+                
+                const logDetailModal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+                logDetailModal.show();
+            })
+            .catch(error => {
+                console.error('获取日志详情失败:', error);
+                alert('获取日志详情失败,请稍后重试');
+            });
+    }
+    
+    // 显示IP信息
+    function showIpInfo(ip) {
+        const modalBody = document.querySelector('#ipModal .modal-body');
+        modalBody.innerHTML = `<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">加载中...</span></div></div>`;
+        
+        const ipModal = new bootstrap.Modal(document.getElementById('ipModal'));
+        ipModal.show();
+        
+        fetch(`/api/ip-info?ip=${ip}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    modalBody.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    return;
+                }
+                
+                let html = `
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">IP</dt>
+                    <dd class="col-sm-8">${data.ip}</dd>
+                    
+                    <dt class="col-sm-4">国家/地区</dt>
+                    <dd class="col-sm-8">${data.country || '-'}</dd>
+                    
+                    <dt class="col-sm-4">省份</dt>
+                    <dd class="col-sm-8">${data.regionName || '-'}</dd>
+                    
+                    <dt class="col-sm-4">城市</dt>
+                    <dd class="col-sm-8">${data.city || '-'}</dd>
+                    
+                    <dt class="col-sm-4">ISP</dt>
+                    <dd class="col-sm-8">${data.isp || '-'}</dd>
+                    
+                    <dt class="col-sm-4">时区</dt>
+                    <dd class="col-sm-8">${data.timezone || '-'}</dd>
+                </dl>`;
+                
+                modalBody.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('获取IP信息失败:', error);
+                modalBody.innerHTML = `<div class="alert alert-danger">获取IP信息失败,请稍后重试</div>`;
+            });
+    }
+</script>
+{% endblock %} 

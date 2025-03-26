@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name }} - blue_cat_'WEB{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <h2 class="mb-4">分类: {{ category.name }}</h2>
+        
+        {% if posts.items %}
+            {% for post in posts.items %}
+            <div class="card blog-card mb-4 rounded-4 shadow-sm hover-shadow">
+                <div class="row g-0">
+                    <div class="col-md-4">
+                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="img-fluid rounded-start-4 h-100 object-fit-cover" alt="{{ post.title }}">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary rounded-pill">{{ post.category.name }}</span>
+                                <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <h4 class="card-title"><a href="{{ url_for('post', slug=post.slug) }}" class="text-decoration-none">{{ post.title }}</a></h4>
+                            <p class="card-text">{{ post.summary }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="rounded-circle me-2" width="30" height="30" alt="{{ post.author.username }}">
+                                    <span class="text-muted">{{ post.author.username }}</span>
+                                </div>
+                                <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-sm btn-primary rounded-pill">阅读全文</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- 分页 -->
+            {% if posts.pages > 1 %}
+            <nav aria-label="分页导航">
+                <ul class="pagination justify-content-center">
+                    {% if posts.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('category', slug=category.slug, page=posts.prev_num) }}" aria-label="上一页">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, posts.pages + 1) %}
+                    <li class="page-item {{ 'active' if page_num == posts.page else '' }}">
+                        <a class="page-link" href="{{ url_for('category', slug=category.slug, page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if posts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('category', slug=category.slug, page=posts.next_num) }}" aria-label="下一页">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="far fa-folder-open fa-3x mb-3"></i>
+                <p>该分类下暂无文章</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- 侧边栏 -->
+        {% include 'sidebar.html' %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,63 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}文章管理 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>文章管理</h2>
+    <a href="{{ url_for('create_post') }}" class="btn btn-primary rounded-pill">
+        <i class="fas fa-plus me-1"></i>添加文章
+    </a>
+</div>
+
+<div class="card rounded-4 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>标题</th>
+                        <th>作者</th>
+                        <th>分类</th>
+                        <th>状态</th>
+                        <th>日期</th>
+                        <th>浏览</th>
+                        <th class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for post in posts %}
+                    <tr>
+                        <td>{{ post.id }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="rounded me-2" width="40" height="40" alt="{{ post.title }}">
+                                <a href="{{ url_for('post', slug=post.slug) }}" class="text-decoration-none">{{ post.title }}</a>
+                            </div>
+                        </td>
+                        <td>{{ post.author.username }}</td>
+                        <td><span class="badge bg-primary rounded-pill">{{ post.category.name }}</span></td>
+                        <td>
+                            {% if post.published %}
+                                <span class="badge bg-success">已发布</span>
+                            {% else %}
+                                <span class="badge bg-secondary">草稿</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ post.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ post.views }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('edit_post', id=post.id) }}" class="btn btn-outline-primary">编辑</a>
+                                <a href="{{ url_for('delete_post', id=post.id) }}" class="btn btn-outline-danger" onclick="return confirm('确定要删除该文章吗？')">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

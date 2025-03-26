@@ -1,0 +1,151 @@
+{% extends 'admin/base.html' %}
+{% import 'macros.html' as macros %}
+
+{% block title %}系统设置 - 测试博客{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>系统设置</h2>
+</div>
+
+<div class="card rounded-4 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('admin_settings') }}" enctype="multipart/form-data">
+            {{ macros.csrf() }}
+            
+            <h5 class="card-title mb-3">站点信息</h5>
+            
+            <div class="mb-3">
+                <label for="siteName" class="form-label">网站名称</label>
+                <input type="text" class="form-control rounded-pill" id="siteName" name="site_name" value="测试博客">
+            </div>
+            
+            <div class="mb-3">
+                <label for="siteDescription" class="form-label">网站描述</label>
+                <textarea class="form-control rounded-3" id="siteDescription" name="site_description" rows="2">一个基于Flask的博客系统</textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="siteLogo" class="form-label">网站Logo</label>
+                <input type="file" class="form-control rounded-pill" id="siteLogo" name="site_logo">
+                <div class="form-text">建议尺寸：200x50像素</div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="siteFavicon" class="form-label">网站图标</label>
+                <input type="file" class="form-control rounded-pill" id="siteFavicon" name="site_favicon">
+                <div class="form-text">建议尺寸：32x32像素</div>
+            </div>
+            
+            <h5 class="card-title mt-4 mb-3">外观设置</h5>
+            
+            <div class="mb-3">
+                <label for="backgroundImage" class="form-label">网站背景图片</label>
+                <input type="file" class="form-control rounded-pill" id="backgroundImage" name="background_image" accept="image/*">
+                
+                {% if background_image %}
+                <div class="mt-2">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='uploads/background/' + background_image) }}" class="img-thumbnail me-3" width="100" alt="当前背景">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBackgroundModal">
+                            <i class="fas fa-trash-alt"></i> 删除背景
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="form-text">推荐使用大小不超过2MB的图片，尺寸建议1920x1080或更大</div>
+            </div>
+            
+            <h5 class="card-title mb-3">内容设置</h5>
+            
+            <div class="mb-3">
+                <label for="postsPerPage" class="form-label">每页显示文章数</label>
+                <input type="number" class="form-control rounded-pill" id="postsPerPage" name="posts_per_page" value="10">
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="allowComments" name="allow_comments" checked>
+                <label class="form-check-label" for="allowComments">允许评论</label>
+            </div>
+            
+            <div class="mb-4 form-check">
+                <input type="checkbox" class="form-check-input" id="approveComments" name="approve_comments">
+                <label class="form-check-label" for="approveComments">评论需要审核</label>
+            </div>
+            
+            <h5 class="card-title mb-3">社交媒体</h5>
+            
+            <div class="mb-3">
+                <label for="facebookUrl" class="form-label">Facebook链接</label>
+                <input type="url" class="form-control rounded-pill" id="facebookUrl" name="facebook_url">
+            </div>
+            
+            <div class="mb-3">
+                <label for="twitterUrl" class="form-label">Twitter链接</label>
+                <input type="url" class="form-control rounded-pill" id="twitterUrl" name="twitter_url">
+            </div>
+            
+            <div class="mb-3">
+                <label for="instagramUrl" class="form-label">Instagram链接</label>
+                <input type="url" class="form-control rounded-pill" id="instagramUrl" name="instagram_url">
+            </div>
+            
+            <div class="mb-4">
+                <label for="weiboUrl" class="form-label">微博链接</label>
+                <input type="url" class="form-control rounded-pill" id="weiboUrl" name="weibo_url">
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary rounded-pill px-4">保存设置</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 删除背景确认模态框 -->
+<div class="modal fade" id="deleteBackgroundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">确认删除</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除当前背景图片吗？此操作不可恢复。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger rounded-pill" id="confirmDeleteBackground">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加删除背景的JavaScript -->
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteBtn = document.getElementById('confirmDeleteBackground');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            fetch('/admin/delete-background', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('删除失败: ' + (data.message || '未知错误'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('删除请求失败');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %} 

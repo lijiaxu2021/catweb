@@ -1,0 +1,391 @@
+/* 管理后台特有样式 */
+.admin-sidebar {
+    background-color: var(--dark-color);
+    min-height: calc(100vh - 56px);
+    padding: 1.5rem 1rem;
+}
+
+.admin-sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.8rem 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s;
+}
+
+.admin-sidebar .nav-link:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar .nav-link.active {
+    color: white;
+    background-color: var(--primary-color);
+}
+
+.admin-sidebar .nav-link i {
+    width: 24px;
+    text-align: center;
+    margin-right: 0.75rem;
+}
+
+.stats-card {
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+    vertical-align: middle;
+}
+
+.table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+/* 数据表格响应式优化 */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto;
+    }
+}
+
+/* 管理后台卡片美化 */
+.card-header {
+    background-color: transparent;
+    font-weight: 600;
+    padding: 1.25rem 1.5rem;
+}
+
+/* 表单元素美化 */
+.form-control, .form-select {
+    padding: 0.75rem 1rem;
+}
+
+/* 管理后台动画效果 */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* 标签管理 */
+.tag-item {
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.tag-item:hover {
+    background-color: #e9ecef;
+}
+
+/* 编辑器美化 */
+.ck-editor__editable {
+    min-height: 300px;
+    border-radius: 0 0 var(--border-radius) var(--border-radius) !important;
+}
+
+.ck-toolbar {
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+}
+
+/* 侧边栏样式 */
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    height: 100vh;
+}
+
+.sidebar .nav-link {
+    color: #6c757d;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    margin: 0.2rem 1rem;
+}
+
+.sidebar .nav-link:hover {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background-color: #007bff;
+}
+
+.sidebar .nav-link.active:hover {
+    color: #fff;
+}
+
+.sidebar .nav-link .fa, 
+.sidebar .nav-link .fas,
+.sidebar .nav-link .far {
+    width: 20px;
+    text-align: center;
+}
+
+/* 主内容区样式 */
+@media (min-width: 768px) {
+    .ms-sm-auto {
+        margin-left: 16.66667% !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .ms-sm-auto {
+        margin-left: 16.66667% !important;
+    }
+}
+
+/* 卡片样式 */
+.card {
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 表格样式 */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* 修复表单验证样式 */
+.invalid-feedback {
+    display: block;
+}
+
+/* 仪表板指标卡片 */
+.stats-card {
+    border-radius: 1rem;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+}
+
+.stats-card .card-body {
+    padding: 1.5rem;
+}
+
+.stats-card .icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+/* 按钮样式 */
+.btn-rounded {
+    border-radius: 50px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+/* 头像样式 */
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-sm {
+    width: 30px;
+    height: 30px;
+}
+
+.avatar-lg {
+    width: 60px;
+    height: 60px;
+}
+
+/* 称号管理相关样式 */
+.badge {
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+/* 防止模态框闪烁 */
+.modal {
+    transition: opacity 0.15s linear;
+}
+.modal:not(.show) {
+    opacity: 0 !important;
+    display: none !important;
+}
+
+/* 称号颜色预览稳定样式 */
+.color-preview {
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* 称号标签和复选框布局稳定 */
+.form-check-inline {
+    margin-bottom: 5px;
+    min-width: 80px;
+}
+
+/* 称号系统增强样式 */
+.badge-container {
+    min-height: 35px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.badge-wrapper {
+    display: inline-block;
+    min-width: 70px;
+    min-height: 30px;
+    margin: 0 5px 5px 0;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 防止表格行高变化 */
+.table td {
+    vertical-align: top !important;
+    height: auto !important;
+    padding: 12px 8px !important;
+}
+
+/* 防止模态框闪烁的高优先级样式 */
+body:not(.loaded) .modal,
+body:not(.loaded) .modal-backdrop {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* 确保badge可见性稳定 */
+.badge {
+    display: inline-block !important;
+    min-height: 24px !important;
+    vertical-align: middle !important;
+    line-height: 1.5 !important;
+    padding: 0.35em 0.65em !important;
+}
+
+/* 日志消息单元格样式 */
+.log-message-cell {
+    max-width: 400px;
+    padding: 10px !important;
+}
+
+.log-full-message {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-height: none;
+    overflow: visible;
+}
+
+/* 当消息过长时使用悬停提示效果 */
+.log-message-cell:hover {
+    position: relative;
+}
+
+.log-message-cell.large-content {
+    cursor: pointer;
+}
+
+/* 详情按钮样式优化 */
+.table .btn-outline-primary {
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+}
+
+/* 添加日志详情的相关样式 */
+.log-detail-message {
+    max-height: 500px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    padding: 20px !important;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.log-detail-message pre {
+    white-space: pre-wrap;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    color: #333;
+    word-break: break-word;
+}
+
+/* 增大模态框尺寸 */
+.modal-xl {
+    max-width: 1140px;
+}
+
+@media (min-width: 1200px) {
+    .modal-xl {
+        max-width: 1300px;
+    }
+}
+
+/* 当表格内容较多时允许横向滚动 */
+.table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+/* 优化搜索区域样式 */
+.collapse-toggle {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #0d6efd;
+}
+
+/* 修改搜索表单组件样式 */
+.search-filters .form-group {
+    margin-bottom: 1rem;
+}
+
+.search-filters label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}
+
+/* 手动IP输入区域样式 */
+#ipManualInput {
+    width: 100%;
+}
+
+/* 表格IP地址链接 */
+td a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+td a:hover {
+    text-decoration: underline;
+} 
