@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>作者: {{ post.author_id }}</p>
+    <p>分类: {{ post.category_id }}</p>
+    <div>{{ post.content|safe }}</div>
+</body>
+</html> 

@@ -1,76 +1,143 @@
 // 页面动画控制
-document.addEventListener('DOMContentLoaded', function() {
-    // 创建页面过渡元素
-    const pageTransition = document.createElement('div');
-    pageTransition.className = 'page-transition';
-    document.body.appendChild(pageTransition);
+document.addEventListener('DOMContentLoaded', () => {
+    // 添加页面加载动画
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'loading-overlay';
+    loadingOverlay.innerHTML = '<div class="spinner"></div>';
+    document.body.appendChild(loadingOverlay);
     
-    // 页面加载完成后淡出过渡效果
+    // 1秒后移除加载动画
     setTimeout(() => {
-        pageTransition.classList.add('hide');
-        setTimeout(() => pageTransition.remove(), 1000);
-    }, 500);
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => loadingOverlay.remove(), 500);
+        
+        // 执行卡片发牌动画
+        animatePostCards();
+        
+        // 执行其他元素的进入动画
+        animateElementsOnScroll();
+    }, 800);
     
-    // 处理链接点击的页面过渡，需要排除下拉菜单触发器
-    document.addEventListener('click', e => {
-        const link = e.target.closest('a');
-        if (link && 
-            link.href && 
-            link.href.startsWith(window.location.origin) && 
-            !link.hasAttribute('data-no-transition') && 
-            !link.classList.contains('dropdown-toggle') && // 排除下拉菜单触发器
-            !link.closest('.dropdown-menu')) { // 排除下拉菜单内部链接
-            
-            e.preventDefault();
-            
-            const newTransition = document.createElement('div');
-            newTransition.className = 'page-transition';
-            document.body.appendChild(newTransition);
-            
-            setTimeout(() => {
-                window.location = link.href;
-            }, 600);
-        }
+    // 设置滚动监听
+    setupScrollAnimations();
+});
+
+// 卡片发牌动画
+function animatePostCards() {
+    const postCards = document.querySelectorAll('.post-card');
+    
+    postCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) rotate(0)';
+        }, 100 + (index * 120)); // 错开时间，产生发牌效果
     });
-    
-    // 滚动动画
-    const animateElements = document.querySelectorAll('.animate-on-scroll');
-    
-    function checkIfInView() {
-        animateElements.forEach(element => {
-            const rect = element.getBoundingClientRect();
-            const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-            
-            if (rect.top <= windowHeight * 0.85) {
-                element.classList.add('visible');
+}
+
+// 滚动时的元素动画
+function setupScrollAnimations() {
+    // 使用 Intersection Observer API 检测元素是否进入视口
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            // 当元素进入视口时
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+                observer.unobserve(entry.target); // 只动画一次
             }
         });
+    }, {
+        root: null, // 相对于视口
+        threshold: 0.15, // 元素至少有15%在视口中可见
+        rootMargin: '0px 0px -100px 0px' // 视口底部偏移，提前触发动画
+    });
+    
+    // 观察所有需要动画的元素
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+        observer.observe(el);
+    });
+}
+
+// 页面中其他元素的动画
+function animateElementsOnScroll() {
+    const animateElements = document.querySelectorAll('.animate-on-scroll');
+    
+    animateElements.forEach((element, index) => {
+        // 添加初始样式
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = `all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.1}s`;
+        
+        // 设置动画类，触发动画
+        setTimeout(() => {
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, 100 + (index * 100));
+    });
+}
+
+// 添加卡片悬停效果
+document.addEventListener('mouseover', (e) => {
+    const card = e.target.closest('.card');
+    if (card) {
+        // 为悬停的卡片添加特殊效果
+        card.style.transform = 'translateY(-10px) scale(1.02)';
+        card.style.boxShadow = '0 20px 30px rgba(0, 0, 0, 0.1)';
     }
-    
-    // 初次检查
-    checkIfInView();
-    
-    // 滚动时检查，增加节流函数
-    let scrollTimeout;
-    window.addEventListener('scroll', function() {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(checkIfInView, 100);
-    });
-    
-    // 添加涟漪效果到按钮
-    const buttons = document.querySelectorAll('button, .btn');
-    buttons.forEach(button => {
-        if (!button.classList.contains('ripple')) {
-            button.classList.add('ripple');
+});
+
+document.addEventListener('mouseout', (e) => {
+    const card = e.target.closest('.card');
+    if (card) {
+        // 还原卡片效果
+        card.style.transform = 'translateY(-5px)';
+        card.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.08)';
+    }
+});
+
+// 添加平滑滚动
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        
+        const targetId = this.getAttribute('href');
+        if (targetId === '#') return;
+        
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+            window.scrollTo({
+                top: targetElement.offsetTop - 100,
+                behavior: 'smooth'
+            });
         }
     });
+});
+
+// 3D卡片效果
+document.addEventListener('mousemove', function(e) {
+    const cards = document.querySelectorAll('.card-3d-effect');
     
-    // 卡片悬浮效果
-    const cards = document.querySelectorAll('.card');
     cards.forEach(card => {
-        if (!card.classList.contains('hover-float')) {
-            card.classList.add('hover-float');
-        }
+        // 获取卡片相对于视口的位置
+        const rect = card.getBoundingClientRect();
+        // 计算鼠标在卡片上的位置(相对于卡片中心)
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        
+        // 旋转角度(根据鼠标位置计算)
+        const rotateX = (y / rect.height * 20).toFixed(2); // 最大20度
+        const rotateY = (x / rect.width * -20).toFixed(2); // 最大20度
+        
+        // 应用变换
+        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    });
+});
+
+// 重置3D效果
+document.addEventListener('mouseleave', function() {
+    const cards = document.querySelectorAll('.card-3d-effect');
+    
+    cards.forEach(card => {
+        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
     });
 });
 

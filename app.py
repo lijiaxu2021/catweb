@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort, g
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
@@ -42,6 +42,7 @@ import subprocess
 import json
 import pytz
 from urllib.parse import urlparse, urljoin
+from sqlalchemy import text
 
 # 定义缺失的东八区时区常量和获取函数
 # 添加在文件顶部导入之后
@@ -92,7 +93,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # CSRF令牌有效期（秒）
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600 * 24  # 将CSRF令牌有效期设为24小时
 app.config['WTF_CSRF_SSL_STRICT'] = False  # 如果不是HTTPS环境，设为False
 ckeditor = CKEditor(app)
 login_manager = LoginManager(app)
@@ -125,14 +126,20 @@ post_tags = db.Table('post_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
 )
 
+# 帖子-点赞关联表(多对多)
+post_likes = db.Table('post_likes',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
 # 用户称号模型
 class Title(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     color = db.Column(db.String(20), default="#007bff")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     
-    # 建立与用户的多对多关系
+    # 关系定义 - 使用back_populates
     users = db.relationship('User', secondary='user_titles', back_populates='titles')
     
     def __repr__(self):
@@ -155,13 +162,14 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.Text)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    posts = db.relationship('Post', backref='author', lazy=True)
-    comments = db.relationship('Comment', backref='author', lazy=True)
+    posts = db.relationship('Post', back_populates='author', foreign_keys='Post.author_id')
+    comments = db.relationship('Comment', back_populates='author', lazy=True)
     titles = db.relationship('Title', secondary='user_titles', back_populates='users')
     
     # 添加当前佩戴的称号ID
     wearing_title_id = db.Column(db.Integer, db.ForeignKey('title.id'), nullable=True)
     wearing_title = db.relationship('Title', foreign_keys=[wearing_title_id])
+    # liked_posts = db.relationship('Post', secondary='post_likes', back_populates='likes', lazy='dynamic')
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -181,7 +189,7 @@ class Category(db.Model):
     posts = db.relationship('Post', backref='category', lazy=True)
 
     def __repr__(self):
-        return f'<Category {self.name}>'
+        return f'<Category {self.name}>'            
 
 # 标签模型
 class Tag(db.Model):
@@ -202,6 +210,9 @@ class Tag(db.Model):
     def __repr__(self):
         return f'<Tag {self.name}>'
 
+    # 添加与Post的反向关系
+    posts = db.relationship('Post', secondary='post_tags', back_populates='tags', lazy='dynamic')
+
 # 文章模型
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -216,8 +227,11 @@ class Post(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
-    tags = db.relationship('Tag', secondary=post_tags, backref=db.backref('posts', lazy='dynamic'))
+    comments_list = db.relationship('Comment', back_populates='post', lazy=True, cascade='all, delete-orphan')
+    tags = db.relationship('Tag', secondary='post_tags', back_populates='posts', lazy='dynamic')
+    # likes = db.relationship('User', secondary='post_likes', back_populates='liked_posts', lazy='dynamic')
+    author = db.relationship('User', back_populates='posts', foreign_keys=[author_id])
+    is_featured = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f'<Post {self.title}>'
@@ -235,12 +249,17 @@ def admin_required(func):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    approved = db.Column(db.Boolean, default=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # 定义关系
+    post = db.relationship('Post', back_populates='comments_list')
+    author = db.relationship('User', back_populates='comments', foreign_keys=[user_id])
+    approved = db.Column(db.Boolean, default=False)
     parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'))
-    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), lazy=True)
+    replies = db.relationship('Comment', back_populates='parent', foreign_keys=[parent_id])
+    parent = db.relationship('Comment', back_populates='replies', remote_side=[id])
 
     def __repr__(self):
         return f'<Comment {self.id}>'
@@ -326,15 +345,47 @@ def strip_tags(html_content):
 @app.route('/')
 def index():
     page = request.args.get('page', 1, type=int)
-    posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).paginate(page=page, per_page=5)
-    recent_posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).limit(5).all()
+    
+    try:
+        # 尝试获取精选文章
+        featured_posts = Post.query.filter_by(published=True, is_featured=True).order_by(Post.created_at.desc()).limit(5).all()
+        # 获取最新文章 (不包含精选)
+        latest_posts = Post.query.filter_by(published=True).filter(Post.is_featured != True).order_by(Post.created_at.desc()).limit(10).all()
+    except Exception as e:
+        # 如果报错（如列不存在），使用备选查询
+        app.logger.error(f"获取精选文章错误: {e}")
+        featured_posts = []  # 暂时为空
+        latest_posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).limit(10).all()
+    
+    # 常规分页
+    posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).paginate(page=page, per_page=10)
+    
+    # 其他代码保持不变
     categories = Category.query.all()
-    popular_tags = Tag.query.all()[:10] 
-    return render_template('index.html', 
-                          posts=posts, 
-                          recent_posts=recent_posts, 
-                          categories=categories, 
-                          popular_tags=popular_tags)
+    
+    # 获取带有计数的标签...
+    from sqlalchemy import func
+    tag_counts = db.session.query(
+        Tag.id, 
+        Tag.name, 
+        Tag.slug, 
+        func.count(post_tags.c.post_id).label('post_count')
+    ).outerjoin(
+        post_tags, 
+        post_tags.c.tag_id == Tag.id
+    ).group_by(Tag.id).all()
+    
+    popular_tags = [{'id': t.id, 'name': t.name, 'slug': t.slug, 'count': t.post_count} for t in tag_counts]
+    
+    recent_posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).limit(5).all()
+    
+    return render_template('index.html',
+                        posts=posts,
+                        categories=categories,
+                        popular_tags=popular_tags,
+                        recent_posts=recent_posts,
+                        featured_posts=featured_posts,
+                        latest_posts=latest_posts)
 
 # 登录
 @app.route('/login', methods=['GET', 'POST'])
@@ -365,22 +416,22 @@ def logout():
 # 文章详情页面
 @app.route('/post/<slug>')
 def post(slug):
-    post = Post.query.filter_by(slug=slug).first_or_404()
-    
-    # 增加浏览量
-    post.views += 1
-    db.session.commit()
-    
-    comments = Comment.query.filter_by(post_id=post.id, approved=True, parent_id=None).all()
-    
-    # 获取点赞数
-    likes_count = Like.query.filter_by(post_id=post.id).count()
-    # 如果用户已登录，检查是否已点赞
-    is_liked = False
-    if current_user.is_authenticated:
-        is_liked = Like.query.filter_by(user_id=current_user.id, post_id=post.id).first() is not None
-    
-    return render_template('post.html', post=post, comments=comments, likes_count=likes_count, is_liked=is_liked)
+    try:
+        post = Post.query.filter_by(slug=slug).first_or_404()
+        
+        # 增加浏览量
+        post.views += 1
+        db.session.commit()
+        
+        # 简化版,暂时不取评论和点赞信息
+        return render_template('post.html', 
+                              post=post, 
+                              comments=[], 
+                              likes_count=0, 
+                              is_liked=False)
+    except Exception as e:
+        app.logger.error(f"访问文章页面出错: {str(e)}")
+        return f"文章访问错误: {str(e)}", 500
 
 # 管理员面板
 @app.route('/admin')
@@ -411,13 +462,26 @@ def admin():
                          recent_comments=recent_comments)
 
 # 添加分类页面路由
-@app.route('/category/<string:slug>')
+@app.route('/category/<slug>')
 def category(slug):
-    category = Category.query.filter_by(slug=slug).first_or_404()
-    page = request.args.get('page', 1, type=int)
-    posts = Post.query.filter_by(category_id=category.id, published=True).order_by(Post.created_at.desc()).paginate(
-        page=page, per_page=5)
-    return render_template('category.html', category=category, posts=posts)
+    try:
+        category = Category.query.filter_by(slug=slug).first_or_404()
+        page = request.args.get('page', 1, type=int)
+        posts = Post.query.filter_by(category_id=category.id, published=True)\
+            .order_by(Post.created_at.desc())\
+            .paginate(page=page, per_page=10)
+        
+        # 获取热门标签供侧边栏使用
+        popular_tags = Tag.query.all()
+        # 获取近期文章供侧边栏使用
+        recent_posts = Post.query.filter_by(published=True).order_by(Post.created_at.desc()).limit(5).all()
+        
+        return render_template('category.html', category=category, posts=posts, 
+                              popular_tags=popular_tags, recent_posts=recent_posts)
+    except Exception as e:
+        app.logger.error(f"分类页面错误: {str(e)}")
+        flash('访问分类页面时出现错误', 'danger')
+        return redirect(url_for('index'))
 
 # 添加标签页面路由
 @app.route('/tag/<slug>')
@@ -1105,61 +1169,18 @@ def delete_post(id):
     return redirect(url_for('my_posts'))
 
 # 添加评论
-@app.route('/post/<string:slug>/comment', methods=['POST'])
+@app.route('/post/<slug>/comment', methods=['POST'])
 @login_required
 def add_comment(slug):
-    post = Post.query.filter_by(slug=slug).first_or_404()
-    
-    if request.method == 'POST':
-        content = request.form.get('content')
-        if content:
-            comment = Comment(content=content, post_id=post.id, user_id=current_user.id)
-            db.session.add(comment)
-            db.session.commit()
-            
-            # 记录日志
-            log = Log(
-                type='article',
-                action='add_comment',
-                message=f'用户 {current_user.username} 在文章 "{post.title}" 下发表评论',
-                user_id=current_user.id,
-                ip_address=request.remote_addr
-            )
-            db.session.add(log)
-            db.session.commit()
-            
-            flash('评论已发布', 'success')
-            
-            # 发送通知给文章作者
-            if post.author.id != current_user.id:
-                notify_message = Message(
-                    title="您的文章收到了新评论",
-                    content=f'{current_user.username} 在您的文章 <a href="{url_for("post", slug=post.slug)}">{post.title}</a> 下发表了评论。',
-                    user_id=post.author.id,
-                    type="info",
-                    icon="fas fa-comment"
-                )
-                db.session.add(notify_message)
-                db.session.commit()
-        
-        return redirect(url_for('post', slug=post.slug))
+    flash('评论功能暂时关闭，稍后恢复', 'info')
+    return redirect(url_for('post', slug=slug))
 
 # 删除评论
 @app.route('/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
 def delete_comment(comment_id):
-    comment = Comment.query.get_or_404(comment_id)
-    
-    # 检查是否是评论作者或管理员
-    if comment.user_id != current_user.id and not current_user.is_admin:
-        flash('您没有权限删除此评论', 'danger')
-        return redirect(url_for('post', slug=comment.post.slug))
-    
-    db.session.delete(comment)
-    db.session.commit()
-    
-    flash('评论已删除', 'success')
-    return redirect(url_for('post', slug=comment.post.slug))
+    flash('评论功能暂时关闭，稍后恢复', 'info')
+    return redirect(url_for('index'))
 
 # 添加CSRF令牌到模板上下文
 @app.context_processor
@@ -1679,38 +1700,26 @@ app.jinja_env.globals.update(available_titles=available_titles)
 # 选择佩戴称号
 @app.route('/profile/wear-title/<int:title_id>', methods=['POST'])
 @login_required
-@csrf.exempt  # 添加这行来豁免CSRF保护
 def wear_title(title_id):
-    # 检查称号是否存在且用户拥有
+    # 检查用户是否拥有该称号
     title = Title.query.get_or_404(title_id)
+    user_has_title = db.session.query(user_titles).filter_by(
+        user_id=current_user.id, title_id=title_id).first() is not None
     
-    # 添加调试输出
-    print(f"尝试佩戴称号: {title.name} (ID:{title_id})")
-    print(f"用户拥有的称号IDs: {[t.id for t in current_user.titles]}")
-    
-    if title not in current_user.titles:
-        flash('您没有拥有这个称号', 'danger')
+    if not user_has_title:
+        flash('你没有这个称号', 'danger')
         return redirect(url_for('profile'))
     
-    # 更新用户佩戴的称号
+    # 更新佩戴的称号
     current_user.wearing_title_id = title_id
+    db.session.commit()
     
-    # 确保更改被保存
-    try:
-        db.session.commit()
-        print(f"成功更新佩戴称号为: {title_id}")
-    except Exception as e:
-        db.session.rollback()
-        print(f"更新称号失败: {e}")
-        flash('更新称号失败，请重试', 'danger')
-    
-    flash(f'成功佩戴称号: {title.name}', 'success')
+    flash(f'已佩戴称号: {title.name}', 'success')
     return redirect(url_for('profile'))
 
-# 取消佩戴称号
-@app.route('/profile/remove-title', methods=['POST'])
+@app.route('/profile/remove-wearing-title', methods=['POST'])
 @login_required
-@csrf.exempt  # 添加这行来豁免CSRF保护
+@csrf.exempt  # 暂时禁用CSRF以便调试
 def remove_wearing_title():
     current_user.wearing_title_id = None
     db.session.commit()
@@ -2491,7 +2500,7 @@ def delete_message(id):
 @app.route('/api/unread-messages', methods=['GET'])
 def get_unread_messages():
     # 当前时间
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 对于未登录用户，只显示设置为"访客可见"的消息
     if not current_user.is_authenticated:
@@ -2639,7 +2648,7 @@ def mark_message_read(message_id):
         else:
             # 更新已有记录
             record.display_count += 1
-            record.read_at = datetime.now(UTC)
+            record.read_at = datetime.now(timezone.utc)
             
         db.session.commit()
         return jsonify({'success': True, 'message': f'成功标记消息 {message_id} 为已读'})
@@ -3009,12 +3018,247 @@ def admin_update_user_titles(user_id):
     flash('用户称号已更新', 'success')
     return redirect(url_for('admin_user_titles'))
 
+@app.route('/post-debug/<slug>')
+def post_debug(slug):
+    try:
+        post = Post.query.filter_by(slug=slug).first_or_404()
+        
+        # 返回一个非常简单的页面,只包含必要的信息
+        debug_info = {
+            'post_id': post.id,
+            'post_title': post.title,
+            'post_content': post.content[:100] + '...',  # 只显示内容的前100个字符
+            'author_id': post.author_id,
+            'category_id': post.category_id
+        }
+        
+        try:
+            # 测试作者关系
+            debug_info['author_name'] = post.author.username if post.author else 'None'
+        except Exception as e:
+            debug_info['author_error'] = str(e)
+            
+        try:
+            # 测试分类关系
+            debug_info['category_name'] = post.category.name if post.category else 'None'
+        except Exception as e:
+            debug_info['category_error'] = str(e)
+            
+        try:
+            # 测试评论
+            comments = Comment.query.filter_by(post_id=post.id, parent_id=None).all()
+            debug_info['comments_count'] = len(comments)
+        except Exception as e:
+            debug_info['comments_error'] = str(e)
+            
+        try:
+            # 测试点赞
+            debug_info['likes_count'] = post.likes.count() if hasattr(post, 'likes') else 'No likes attribute'
+        except Exception as e:
+            debug_info['likes_error'] = str(e)
+            
+        # 简单HTML输出
+        html = "<h1>文章调试信息</h1><pre>"
+        for key, value in debug_info.items():
+            html += f"{key}: {value}<br>"
+        html += "</pre><a href='/'>返回首页</a>"
+        
+        return html
+        
+    except Exception as e:
+        # 简单错误页
+        return f"""
+        <h1>出现错误</h1>
+        <p>错误类型: {type(e).__name__}</p>
+        <p>错误内容: {str(e)}</p>
+        <p><a href='/'>返回首页</a></p>
+        """
+
+@app.route('/post-simple/<slug>')
+def post_simple(slug):
+    try:
+        # 最基本的查询,不包含任何关系加载
+        post = Post.query.filter_by(slug=slug).first_or_404()
+        return render_template('simple_post.html', post=post)
+    except Exception as e:
+        return f"错误: {str(e)}", 500
+
+@app.route('/fix-post-likes')
+@login_required
+@admin_required
+def fix_post_likes():
+    try:
+        # 检查post_likes表是否存在
+        db.session.execute(text('SELECT 1 FROM post_likes LIMIT 1'))
+        result = "post_likes表已存在"
+    except Exception:
+        # 表不存在,创建它
+        db.session.execute(text('''
+        CREATE TABLE post_likes (
+            post_id INTEGER NOT NULL, 
+            user_id INTEGER NOT NULL,
+            PRIMARY KEY (post_id, user_id),
+            FOREIGN KEY(post_id) REFERENCES post (id),
+            FOREIGN KEY(user_id) REFERENCES user (id)
+        )
+        '''))
+        db.session.commit()
+        result = "已创建post_likes表"
+    
+    return f'''
+    <h1>数据库修复</h1>
+    <p>{result}</p>
+    <p><a href="/">返回首页</a></p>
+    '''
+
+@app.before_request
+def before_request():
+    g.user = current_user
+    if current_user.is_authenticated:
+        try:
+            # 确保称号信息已加载
+            if current_user.wearing_title_id and not hasattr(current_user, '_wearing_title_loaded'):
+                current_user.wearing_title = Title.query.get(current_user.wearing_title_id)
+                current_user._wearing_title_loaded = True
+                
+            # 获取用户的未读通知
+            notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
+            unread_notifications_count = Notification.query.filter_by(user_id=current_user.id, read=False).count()
+            
+            # 将通知数据添加到g对象中,以便所有模板都能访问
+            g.notifications = notifications
+            g.unread_notifications_count = unread_notifications_count
+        except Exception as e:
+            app.logger.error(f"获取通知和称号信息失败: {str(e)}")
+            g.notifications = []
+            g.unread_notifications_count = 0
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    # 获取当前用户的所有通知
+    notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).all()
+    
+    # 将所有未读通知标记为已读
+    unread = Notification.query.filter_by(user_id=current_user.id, read=False).all()
+    for notification in unread:
+        notification.read = True
+    db.session.commit()
+    
+    return render_template('notifications.html', notifications=notifications)
+
+@app.route('/test-notification')
+@login_required
+def test_notification():
+    if current_user.is_admin:
+        notification = Notification(
+            user_id=current_user.id,
+            message="这是一条测试通知",
+            link=url_for('index')
+        )
+        db.session.add(notification)
+        db.session.commit()
+        flash('测试通知已创建', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    # 验证表单数据
+    if not current_password or not new_password or not confirm_password:
+        flash('所有字段都是必填的', 'danger')
+        return redirect(url_for('profile'))
+    
+    # 检查当前密码是否正确
+    if not check_password_hash(current_user.password, current_password):
+        flash('当前密码不正确', 'danger')
+        return redirect(url_for('profile'))
+    
+    # 验证新密码
+    if new_password != confirm_password:
+        flash('新密码和确认密码不匹配', 'danger')
+        return redirect(url_for('profile'))
+    
+    if len(new_password) < 6:
+        flash('新密码至少需要6个字符', 'danger')
+        return redirect(url_for('profile'))
+    
+    # 更新密码
+    current_user.password = generate_password_hash(new_password)
+    db.session.commit()
+    
+    flash('密码已成功更改', 'success')
+    return redirect(url_for('profile'))
+
+# 在其他模型定义附近添加
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(255), default='#')
+    read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    
+    # 关系
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+    
+    def __repr__(self):
+        return f'<Notification {self.id}>'
+
+@app.route('/admin/feature-post/<int:post_id>', methods=['POST'])
+@login_required
+def feature_post(post_id):
+    if not current_user.is_admin:
+        flash('您没有权限执行此操作', 'danger')
+        return redirect(url_for('index'))
+    
+    post = Post.query.get_or_404(post_id)
+    
+    # 切换精选状态
+    post.is_featured = not post.is_featured
+    
+    db.session.commit()
+    
+    if post.is_featured:
+        flash(f'文章"{post.title}"已设为精选', 'success')
+    else:
+        flash(f'文章"{post.title}"已取消精选', 'info')
+        
+    # 重定向回之前的页面
+    return redirect(request.referrer or url_for('admin_posts'))
+
+@app.route('/admin/featured-posts')
+@login_required
+def admin_featured_posts():
+    if not current_user.is_admin:
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('index'))
+    
+    # 获取当前精选文章
+    featured_posts = Post.query.filter_by(published=True, is_featured=True).order_by(Post.created_at.desc()).all()
+    
+    # 获取可设为精选的文章
+    available_posts = Post.query.filter_by(published=True, is_featured=False).order_by(Post.created_at.desc()).limit(20).all()
+    
+    return render_template('admin/featured_posts.html', 
+                          featured_posts=featured_posts, 
+                          available_posts=available_posts)
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash('表单已过期，请刷新页面后重试。', 'danger')
+    return redirect(request.referrer or url_for('index'))
+
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     
     with app.app_context():
-        db.create_all()
+        db.create_all()  # 创建所有缺少的表
         create_initial_data()
         
         # 尝试创建 wearing_title_id 列
@@ -3035,31 +3279,13 @@ if __name__ == '__main__':
             db.session.rollback()
             print(f"列可能已存在: {e}")
         
-        # 添加系统消息显示次数列
+        # 添加 is_featured 列到 post 表
         try:
-            db.session.execute('ALTER TABLE system_message ADD COLUMN max_display_count INTEGER DEFAULT 1')
+            db.session.execute('ALTER TABLE post ADD COLUMN is_featured BOOLEAN DEFAULT 0')
             db.session.commit()
-            print("成功添加 system_message.max_display_count 列")
-        except Exception as e:
-            db.session.rollback()
-            print(f"列可能已存在: {e}")
-            
-        # 添加消息阅读记录显示计数列
-        try:
-            db.session.execute('ALTER TABLE message_read_record ADD COLUMN display_count INTEGER DEFAULT 1')
-            db.session.commit()
-            print("成功添加 message_read_record.display_count 列")
+            print("成功添加 is_featured 列")
         except Exception as e:
             db.session.rollback()
             print(f"列可能已存在: {e}")
         
-        # 添加访客可见列
-        try:
-            db.session.execute('ALTER TABLE system_message ADD COLUMN guest_visible BOOLEAN DEFAULT 0')
-            db.session.commit()
-            print("成功添加 system_message.guest_visible 列")
-        except Exception as e:
-            db.session.rollback()
-            print(f"列可能已存在: {e}")
-        
-    app.run(debug=True) 
+    app.run(debug=True)

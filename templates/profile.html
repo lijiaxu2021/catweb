@@ -77,7 +77,7 @@
                     {{ user.wearing_title.name }}
                 </span>
                 <form method="post" action="{{ url_for('remove_wearing_title') }}" class="d-inline">
-                    {{ csrf_token()|safe }}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
                         <i class="fas fa-times"></i> 取消佩戴
                     </button>
@@ -97,7 +97,7 @@
                 <div class="col-auto mb-2">
                     <form method="post" action="{{ url_for('wear_title', title_id=title.id) }}" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-secondary">
+                        <button type="submit" class="btn btn-outline-secondary rounded-pill">
                             <span class="badge me-1" style="background-color: {{ title.color }}">{{ title.name }}</span>
                             <i class="fas fa-check-circle ms-1"></i>
                         </button>
@@ -107,6 +107,8 @@
                 {% endfor %}
             </div>
         </div>
+        {% else %}
+        <p class="text-muted fst-italic">您还没有获得任何称号</p>
         {% endif %}
     </div>
 </div>
@@ -140,4 +142,53 @@
         </form>
     </div>
 </div>
+
+<div class="user-info">
+    <h1>{{ user.username }}
+        {% if user.wearing_title %}
+        <span class="badge ms-2" style="background-color: {{ user.wearing_title.color }}">
+            {{ user.wearing_title.name }}
+        </span>
+        {% endif %}
+    </h1>
+    <!-- 其他用户信息 -->
+</div>
+
+<!-- 在可选称号部分添加预览功能 -->
+<div class="mb-4">
+    <h5>称号预览</h5>
+    <div class="preview-box p-3 border rounded">
+        <div class="d-flex align-items-center">
+            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" 
+                 class="rounded-circle me-2" width="32" height="32" alt="{{ user.username }}">
+            <span>{{ user.username }}</span>
+            <span id="previewTitle" class="badge ms-2" style="background-color: {{ user.wearing_title.color if user.wearing_title else '#6c757d' }};">
+                {{ user.wearing_title.name if user.wearing_title else '预览称号' }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+// 添加JavaScript实现称号预览
+document.addEventListener('DOMContentLoaded', function() {
+    const titleButtons = document.querySelectorAll('.btn-outline-secondary');
+    const previewTitle = document.getElementById('previewTitle');
+    const originalColor = previewTitle.style.backgroundColor;
+    const originalText = previewTitle.textContent;
+    
+    titleButtons.forEach(button => {
+        const badge = button.querySelector('.badge');
+        button.addEventListener('mouseenter', function() {
+            previewTitle.style.backgroundColor = badge.style.backgroundColor;
+            previewTitle.textContent = badge.textContent;
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            previewTitle.style.backgroundColor = originalColor;
+            previewTitle.textContent = originalText;
+        });
+    });
+});
+</script>
 {% endblock %} 

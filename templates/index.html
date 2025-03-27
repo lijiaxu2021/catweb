@@ -2,76 +2,632 @@
 
 {% block title %}blue_cat_'WEB - 首页{% endblock %}
 
-{% block content %}
-<div class="row">
-    <!-- 主内容区 -->
-    <div class="col-lg-8">
-        <!-- 特色文章轮播 -->
-        <div id="featuredCarousel" class="carousel slide mb-4 rounded-4 overflow-hidden shadow" data-bs-ride="carousel">
-            <div class="carousel-indicators">
-                {% for post in posts.items[:3] %}
-                <button type="button" data-bs-target="#featuredCarousel" data-bs-slide-to="{{ loop.index0 }}" {% if loop.first %}class="active"{% endif %}></button>
-                {% endfor %}
-            </div>
-            <div class="carousel-inner">
-                {% for post in posts.items[:3] %}
-                <div class="carousel-item {% if loop.first %}active{% endif %}">
-                    <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="d-block w-100" alt="{{ post.title }}">
-                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded-4">
-                        <h5>{{ post.title }}</h5>
-                        <p>{{ post.summary }}</p>
-                        <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-primary btn-sm rounded-pill">阅读全文</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Previous</span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Next</span>
-            </button>
-        </div>
+{% block extra_css %}
+<style>
+.hero-section {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    background: linear-gradient(135deg, var(--primary-color), #2c3e50);
+    margin-bottom: 2rem;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
 
-        <!-- 文章列表 -->
-        <h2 class="mb-4 border-bottom pb-2">最新文章</h2>
-        {% for post in posts.items %}
-        <div class="card blog-card mb-4 rounded-4 shadow-sm hover-shadow">
-            <div class="row g-0">
-                <div class="col-md-4">
-                    <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="img-fluid rounded-start-4 h-100 object-fit-cover" alt="{{ post.title }}">
+.hero-content {
+    padding: 3rem 2rem;
+    color: white;
+    position: relative;
+    z-index: 2;
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.hero-description {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin-bottom: 1.5rem;
+}
+
+.featured-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 0.35rem 0.85rem;
+    background-color: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+    z-index: 3;
+}
+
+.trending-articles {
+    background: linear-gradient(to right, #f8f9fa, #ffffff);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-left: 5px solid var(--primary-light);
+}
+
+.post-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.post-card:hover {
+    transform: translateY(-8px) scale(1.01);
+}
+
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.featured-post-card {
+    height: 350px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 20px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.featured-post-card:hover .card-overlay {
+    padding-bottom: 2.5rem;
+}
+
+.category-pill {
+    display: inline-block;
+    padding: 0.25rem 1rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    background-color: var(--primary-color);
+}
+
+.stats-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.stat-item i {
+    margin-right: 0.3rem;
+}
+
+.quick-access {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.quick-access-item {
+    flex: 1;
+    min-width: 150px;
+    background-color: white;
+    border-radius: 12px;
+    padding: 1.2rem;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.quick-access-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.quick-access-item i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.topic-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    margin: 0.25rem;
+    display: inline-block;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+}
+
+.topic-badge:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.newsletter-box {
+    background: linear-gradient(135deg, #4b6cb7, #182848);
+    border-radius: 20px;
+    padding: 2rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.newsletter-pattern {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.1;
+}
+
+.tag-cloud-item {
+    display: inline-block;
+    padding: 0.35rem 0.8rem;
+    border-radius: 50px;
+    margin: 0.25rem;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+}
+
+.tag-cloud-item:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.content-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #f1f3f5;
+    padding-bottom: 0.75rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: var(--primary-color);
+    border-radius: 2px;
+}
+
+.view-all-link {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.view-all-link:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 1.8rem;
+    }
+    
+    .quick-access {
+        flex-direction: column;
+    }
+    
+    .quick-access-item {
+        min-width: 100%;
+    }
+    
+    .featured-post-card {
+        height: 250px;
+    }
+}
+
+/* 新增顶部大轮播样式 */
+.hero-carousel {
+    margin-bottom: 2rem;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.hero-carousel .carousel-item {
+    height: 450px;
+}
+
+.hero-carousel .carousel-item img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    filter: brightness(0.8);
+}
+
+.hero-carousel .carousel-caption {
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 80%;
+    margin: 0 auto;
+    bottom: 3rem;
+}
+
+.hero-carousel .carousel-control-prev,
+.hero-carousel .carousel-control-next {
+    width: 10%;
+}
+
+.featured-section {
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.featured-section .section-title {
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 15px;
+    font-weight: 700;
+}
+
+.featured-section .section-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    background: var(--primary-color);
+    border-radius: 5px;
+}
+
+.featured-article {
+    background-color: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.featured-article:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.featured-article-img {
+    height: 200px;
+    overflow: hidden;
+}
+
+.featured-article-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.featured-article:hover .featured-article-img img {
+    transform: scale(1.1);
+}
+
+.featured-badge-icon {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.featured-article-content {
+    padding: 1.5rem;
+}
+
+.featured-article-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.featured-article-meta img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.featured-article-meta .date {
+    margin-left: auto;
+}
+
+.featured-article-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.featured-article-excerpt {
+    font-size: 0.95rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 顶部大轮播 - 最新文章 -->
+<div id="heroCarousel" class="carousel slide hero-carousel" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        {% for post in latest_posts[:5] %}
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ loop.index0 }}" 
+                {% if loop.first %}class="active" aria-current="true"{% endif %} 
+                aria-label="Slide {{ loop.index }}"></button>
+        {% endfor %}
+    </div>
+    <div class="carousel-inner">
+        {% for post in latest_posts[:5] %}
+        <div class="carousel-item {% if loop.first %}active{% endif %}">
+            <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="d-block w-100" alt="{{ post.title }}">
+            <div class="carousel-caption d-md-block">
+                <h2>{{ post.title }}</h2>
+                <p class="d-none d-md-block">{{ post.summary }}</p>
+                <div class="d-flex justify-content-center align-items-center gap-2 mt-3">
+                    <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-primary rounded-pill">
+                        阅读全文 <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                    <span class="badge bg-light text-dark rounded-pill d-none d-md-block">
+                        <i class="fas fa-calendar-alt me-1"></i> {{ post.created_at.strftime('%Y-%m-%d') }}
+                    </span>
                 </div>
-                <div class="col-md-8">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-primary rounded-pill">{{ post.category.name }}</span>
-                            <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">上一篇</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">下一篇</span>
+    </button>
+</div>
+
+<!-- 精选文章区域 - 标签式设计 -->
+{% if featured_posts %}
+<div class="featured-tabs mb-4">
+    <h2 class="section-title">精选推荐</h2>
+    
+    <ul class="nav nav-tabs featured-tabs-nav mb-3" id="featuredTabs" role="tablist">
+        {% for post in featured_posts %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if loop.first %}active{% endif %}" 
+                    id="featured-tab-{{ post.id }}" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#featured-content-{{ post.id }}" 
+                    type="button" role="tab" 
+                    aria-controls="featured-content-{{ post.id }}" 
+                    aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                {{ post.title|truncate(15, true) }}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <div class="tab-content featured-tabs-content" id="featuredTabsContent">
+        {% for post in featured_posts %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+             id="featured-content-{{ post.id }}" 
+             role="tabpanel" 
+             aria-labelledby="featured-tab-{{ post.id }}">
+            <div class="card featured-tab-card border-0 shadow-sm">
+                <div class="row g-0">
+                    <div class="col-md-5">
+                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                             class="featured-tab-image rounded-start h-100 w-100 object-fit-cover" 
+                             alt="{{ post.title }}">
+                        <div class="featured-badge">
+                            <i class="fas fa-star me-1"></i> 精选文章
                         </div>
-                        <h5 class="card-title">{{ post.title }}</h5>
-                        <p class="card-text">{{ post.summary }}</p>
-                        <div class="mt-2 d-flex justify-content-between align-items-center">
-                            <div>
-                                {% for tag in post.tags %}
-                                <span class="badge bg-secondary rounded-pill">{{ tag.name }}</span>
-                                {% endfor %}
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card-body d-flex flex-column h-100">
+                            <span class="badge bg-primary rounded-pill mb-2">{{ post.category.name }}</span>
+                            <h3 class="card-title">{{ post.title }}</h3>
+                            <p class="card-text flex-grow-1">{{ post.summary }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" 
+                                         class="rounded-circle me-2" width="32" height="32" 
+                                         alt="{{ post.author.username }}">
+                                    <small class="text-muted">{{ post.author.username }}</small>
+                                </div>
+                                <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-primary rounded-pill">
+                                    阅读全文 <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
                             </div>
-                            <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-sm btn-outline-primary rounded-pill">阅读全文 &raquo;</a>
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
-                            <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="avatar-mini rounded-circle me-2" alt="{{ post.author.username }}">
-                            <small class="text-muted">{{ post.author.username }}</small>
-                            <span class="ms-auto text-muted"><i class="fas fa-eye me-1"></i>{{ post.views }} <i class="fas fa-comment ms-2 me-1"></i>{{ post.comments|length }}</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 英雄区域 -->
+<div class="hero-section animate-on-scroll">
+    <div class="hero-content">
+        <h1 class="hero-title">探索编程世界的奇妙旅程</h1>
+        <p class="hero-description">从前端到后端，从设计模式到算法，这里是编程爱好者的知识殿堂。</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('categories') }}" class="btn btn-light rounded-pill">浏览分类</a>
+            <a href="{{ url_for('search') }}?q=python" class="btn btn-outline-light rounded-pill">热门话题</a>
+        </div>
+    </div>
+    <span class="featured-badge">
+        <i class="fas fa-fire-alt me-1"></i> 精选内容
+    </span>
+</div>
+
+<!-- 快速访问区域 -->
+<div class="quick-access animate-on-scroll">
+    <a href="{{ url_for('categories') }}" class="quick-access-item">
+        <i class="fas fa-th-large"></i>
+        <h5>分类浏览</h5>
+        <p class="text-muted small mb-0">按主题查找文章</p>
+    </a>
+    <a href="{{ url_for('tags_list') }}" class="quick-access-item">
+        <i class="fas fa-tags"></i>
+        <h5>标签云</h5>
+        <p class="text-muted small mb-0">按关键词发现</p>
+    </a>
+    <a href="{{ url_for('search') }}" class="quick-access-item">
+        <i class="fas fa-search"></i>
+        <h5>搜索</h5>
+        <p class="text-muted small mb-0">查找特定内容</p>
+    </a>
+    <a href="#subscribe" class="quick-access-item">
+        <i class="fas fa-envelope"></i>
+        <h5>订阅</h5>
+        <p class="text-muted small mb-0">获取最新动态</p>
+    </a>
+</div>
+
+<div class="row">
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        <!-- 特色文章展示 -->
+        <div class="content-section-header">
+            <h2 class="section-title">精选文章</h2>
+            <a href="{{ url_for('search') }}?sort=views" class="view-all-link">查看更多 <i class="fas fa-arrow-right ms-1"></i></a>
+        </div>
+        
+        {% if posts.items|length >= 1 %}
+        <div class="featured-post-card animate-on-scroll" style="background-image: url('{{ url_for('static', filename='uploads/' + posts.items[0].featured_image) }}');">
+            <div class="card-overlay">
+                <span class="category-pill">{{ posts.items[0].category.name }}</span>
+                <h3 class="mt-2 mb-3">{{ posts.items[0].title }}</h3>
+                <p class="mb-3">{{ posts.items[0].summary }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='uploads/' + posts.items[0].author.profile_pic) }}" 
+                             class="rounded-circle me-2" width="30" height="30" alt="{{ posts.items[0].author.username }}">
+                        <span>{{ posts.items[0].author.username }}</span>
+                    </div>
+                    <a href="{{ url_for('post', slug=posts.items[0].slug) }}" class="btn btn-primary btn-sm rounded-pill">阅读全文</a>
+                </div>
+                <div class="stats-container">
+                    <span class="stat-item"><i class="fas fa-eye"></i> {{ posts.items[0].views }}</span>
+                    <span class="stat-item"><i class="fas fa-comment"></i> {{ posts.items[0].comments|length }}</span>
+                    <span class="stat-item"><i class="fas fa-calendar"></i> {{ posts.items[0].created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 热门话题 -->
+        <div class="trending-articles mt-4 animate-on-scroll">
+            <h5><i class="fas fa-chart-line me-2"></i>热门话题</h5>
+            <div class="d-flex flex-wrap mt-3">
+                <a href="{{ url_for('search') }}?q=Python" class="topic-badge"><i class="fab fa-python me-1"></i> Python</a>
+                <a href="{{ url_for('search') }}?q=Flask" class="topic-badge"><i class="fas fa-flask me-1"></i> Flask</a>
+                <a href="{{ url_for('search') }}?q=前端" class="topic-badge"><i class="fab fa-js me-1"></i> 前端</a>
+                <a href="{{ url_for('search') }}?q=后端" class="topic-badge"><i class="fas fa-server me-1"></i> 后端</a>
+                <a href="{{ url_for('search') }}?q=数据库" class="topic-badge"><i class="fas fa-database me-1"></i> 数据库</a>
+                <a href="{{ url_for('search') }}?q=AI" class="topic-badge"><i class="fas fa-robot me-1"></i> 人工智能</a>
+            </div>
+        </div>
+
+        <!-- 文章列表 -->
+        <div class="content-section-header mt-4">
+            <h2 class="section-title">最新文章</h2>
+            <span class="badge bg-primary rounded-pill">{{ posts.total }} 篇</span>
+        </div>
+        <div class="responsive-grid" data-min-width="300" data-gap="20">
+            {% for post in posts.items %}
+            {% if not loop.first %}
+            <div class="card post-card animate-on-scroll">
+                <div class="row g-0">
+                    <div class="col-md-4">
+                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" class="img-fluid rounded-start-4 h-100 object-fit-cover" alt="{{ post.title }}">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary rounded-pill">{{ post.category.name }}</span>
+                                <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <h5 class="card-title">{{ post.title }}</h5>
+                            <p class="card-text">{{ post.summary }}</p>
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% for tag in post.tags %}
+                                    <a href="{{ url_for('tag', slug=tag.slug) }}" class="badge bg-secondary rounded-pill">
+                                        {{ tag.name }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-sm btn-outline-primary rounded-pill">阅读全文 &raquo;</a>
+                            </div>
+                            <div class="mt-2 d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="avatar-mini rounded-circle me-2" alt="{{ post.author.username }}">
+                                <small class="text-muted">{{ post.author.username }}</small>
+                                <span class="ms-auto text-muted"><i class="fas fa-eye me-1"></i>{{ post.views }} <i class="fas fa-comment ms-2 me-1"></i>{{ post.comments|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
 
         <!-- 分页 -->
-        <nav aria-label="Page navigation">
+        <nav aria-label="Page navigation" class="mt-4">
             <ul class="pagination justify-content-center">
                 {% if posts.has_prev %}
                 <li class="page-item">
@@ -118,21 +674,8 @@
 
     <!-- 侧边栏 -->
     <div class="col-lg-4">
-        <!-- 搜索框 -->
-        <div class="card rounded-4 shadow-sm mb-4">
-            <div class="card-body">
-                <h5 class="card-title">搜索文章</h5>
-                <form action="{{ url_for('search') }}" method="get">
-                    <div class="input-group">
-                        <input type="text" class="form-control rounded-pill-start" name="q" placeholder="输入关键词...">
-                        <button class="btn btn-primary rounded-pill-end" type="submit"><i class="fas fa-search"></i></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <!-- 作者信息 -->
-        <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card rounded-4 shadow-sm mb-4 animate-on-scroll">
             <div class="card-body text-center">
                 <img src="{{ url_for('static', filename='img/author.jpg') }}" class="rounded-circle mb-3" width="120" height="120" alt="Author">
                 <h5 class="card-title">Blue_cat_</h5>
@@ -148,7 +691,7 @@
         </div>
 
         <!-- 分类列表 -->
-        <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card rounded-4 shadow-sm mb-4 animate-on-scroll">
             <div class="card-body">
                 <h5 class="card-title">文章分类</h5>
                 <div class="list-group list-group-flush">
@@ -163,19 +706,21 @@
         </div>
 
         <!-- 标签云 -->
-        <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card rounded-4 shadow-sm mb-4 animate-on-scroll">
             <div class="card-body">
                 <h5 class="card-title">热门标签</h5>
-                <div class="tag-cloud">
+                <div class="tag-cloud mt-3">
                     {% for tag in popular_tags %}
-                    <a href="{{ url_for('tag', slug=tag.slug) }}" class="btn btn-sm btn-outline-secondary rounded-pill mb-2">{{ tag.name }}</a>
+                    <a href="{{ url_for('tag', slug=tag.slug) }}" class="tag-cloud-item">
+                        {{ tag.name }}
+                    </a>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
         <!-- 最近文章 -->
-        <div class="card rounded-4 shadow-sm mb-4">
+        <div class="card rounded-4 shadow-sm mb-4 animate-on-scroll">
             <div class="card-body">
                 <h5 class="card-title">最近发布</h5>
                 <div class="list-group list-group-flush">
@@ -195,18 +740,65 @@
         </div>
 
         <!-- 订阅卡片 -->
-        <div class="card bg-primary text-white rounded-4 shadow mb-4">
-            <div class="card-body text-center">
-                <h5 class="card-title">订阅博客更新</h5>
-                <p class="card-text">输入您的邮箱，获取最新文章和动态</p>
+        <div class="newsletter-box mb-4 animate-on-scroll" id="subscribe">
+            <div class="newsletter-pattern"></div>
+            <div class="position-relative">
+                <h5 class="card-title"><i class="fas fa-envelope-open-text me-2"></i>订阅博客更新</h5>
+                <p class="card-text">输入您的邮箱，获取最新文章和动态提醒</p>
                 <form action="{{ url_for('subscribe') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="input-group mb-3">
-                        <input type="email" class="form-control rounded-pill-start" placeholder="您的邮箱地址" required>
-                        <button class="btn btn-light rounded-pill-end" type="submit">订阅</button>
+                        <input type="email" name="email" class="form-control rounded-pill-start" placeholder="您的邮箱地址" required>
+                        <button class="btn btn-light rounded-pill-end" type="submit">
+                            <i class="fas fa-paper-plane me-1"></i> 订阅
+                        </button>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="privacyCheck" required>
+                        <label class="form-check-label small" for="privacyCheck">
+                            我同意接收博客更新通知
+                        </label>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 增强卡片悬停效果
+    const postCards = document.querySelectorAll('.post-card');
+    postCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-12px) scale(1.02)';
+            this.style.boxShadow = '0 20px 30px rgba(0, 0, 0, 0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.08)';
+        });
+    });
+    
+    // 给标签添加随机颜色
+    const tagItems = document.querySelectorAll('.tag-cloud-item');
+    const colors = ['#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0', '#4895ef', '#560bad', '#f3722c'];
+    
+    tagItems.forEach(tag => {
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        tag.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = randomColor;
+            this.style.color = 'white';
+        });
+        
+        tag.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '#f8f9fa';
+            this.style.color = '#495057';
+        });
+    });
+});
+</script>
 {% endblock %} 

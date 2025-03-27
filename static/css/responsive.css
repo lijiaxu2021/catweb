@@ -1,0 +1,244 @@
+/* 响应式设计 - 设备适配优化 */
+:root {
+  --mobile-border-radius: 12px;  /* 移动端更小的圆角 */
+  --desktop-border-radius: 16px; /* 桌面端更大的圆角 */
+}
+
+/* 桌面端优化 (大于1200px) */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1140px;
+  }
+  
+  .card {
+    border-radius: var(--desktop-border-radius);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+  }
+  
+  .card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* 桌面端3D悬停效果 */
+  .desktop-hover-3d {
+    transition: transform 0.3s ease;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+  
+  .desktop-hover-3d:hover {
+    transform: rotateX(5deg) rotateY(5deg) scale(1.05);
+  }
+  
+  /* 桌面端特有的细节增强 */
+  .btn {
+    padding: 0.6rem 1.8rem;
+  }
+  
+  /* 更大的文章内容和更宽松的排版 */
+  .blog-content {
+    font-size: 1.125rem;
+    line-height: 1.9;
+  }
+  
+  /* 桌面端导航栏悬停效果 */
+  .navbar-nav .nav-link {
+    position: relative;
+    transition: color 0.3s;
+  }
+  
+  .navbar-nav .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease, left 0.3s ease;
+  }
+  
+  .navbar-nav .nav-link:hover::after {
+    width: 100%;
+    left: 0;
+  }
+}
+
+/* 平板端优化 (768px - 1199px) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .card {
+    border-radius: 14px;
+  }
+  
+  /* 平板导航栏优化 */
+  .navbar-brand {
+    font-size: 1.3rem;
+  }
+  
+  /* 调整在平板上的卡片布局 */
+  .row {
+    margin-left: -10px;
+    margin-right: -10px;
+  }
+  
+  .col, [class*="col-"] {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+/* 移动端优化 (小于768px) */
+@media (max-width: 767px) {
+  body {
+    font-size: 0.95rem;
+  }
+  
+  .card {
+    border-radius: var(--mobile-border-radius);
+    margin-bottom: 15px;
+  }
+  
+  /* 移动端按钮尺寸 */
+  .btn {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  /* 调整移动端页面间距 */
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  /* 移动端导航栏优化 */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+  
+  /* 移动端文章内容 */
+  .blog-content {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  
+  /* 移动端表单元素 */
+  .form-control {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  /* 移动端搜索栏 */
+  .search-type-select {
+    min-width: 60px;
+  }
+  
+  /* 简化移动端动画效果，提高性能 */
+  .card, .btn {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  /* 适配移动端触摸滑动 */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 15px;
+  }
+  
+  /* 移动端页脚 */
+  footer {
+    padding: 1.5rem 0;
+    text-align: center;
+  }
+}
+
+/* 移动端触摸优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 增大点击区域 */
+  .nav-link, .btn, .dropdown-item {
+    padding: 0.75rem 1rem;
+  }
+  
+  /* 去除悬停效果，改用active状态 */
+  .card:active {
+    transform: scale(0.98);
+  }
+  
+  /* 触摸反馈 */
+  .touch-feedback {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .touch-feedback::after {
+    content: '';
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1%, transparent 1%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10,10);
+    opacity: 0;
+    transition: transform 0.5s, opacity 0.5s;
+  }
+  
+  .touch-feedback:active::after {
+    transform: scale(0,0);
+    opacity: 0.3;
+    transition: 0s;
+  }
+}
+
+/* 黑暗模式优化 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: #e9ecef;
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --border-color: #333;
+  }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+  }
+  
+  .card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+  }
+  
+  .navbar-dark {
+    background-color: rgba(0, 0, 0, 0.95) !important;
+  }
+  
+  /* 降低暗模式下的阴影强度 */
+  .card {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 降低动画 - 用户减少动画选项 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .post-card {
+    opacity: 1;
+    transform: none;
+  }
+} 

@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="msvalidate.01" content="8C629217FFC4E6E573238257E82FF859" />
     <link rel="sitemap" type="application/xml" title="Sitemap" href="{{ url_for('static', filename='sitemap.xml') }}" />
     <title>{% block title %}blue_cat_'WEB{% endblock %}</title>
@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     {% block extra_css %}{% endblock %}
 </head>
 <body {% if background_image %}style="background-image: url('{{ url_for('static', filename='uploads/background/' + background_image) }}'); background-attachment: fixed; background-size: cover; background-position: center;"{% endif %}>
@@ -86,9 +88,47 @@
                 
                 <div class="navbar-nav">
                     {% if current_user.is_authenticated %}
+                        <!-- 管理后台按钮 -->
                         {% if current_user.is_admin %}
                         <a class="nav-link" href="{{ url_for('admin') }}">管理后台</a>
                         {% endif %}
+                        
+                        <!-- 通知菜单项 -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                {% if g.get('unread_notifications_count', 0) > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ g.get('unread_notifications_count', 0) }}
+                                    <span class="visually-hidden">条未读通知</span>
+                                </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 300px;">
+                                <li><h6 class="dropdown-header">通知中心</h6></li>
+                                {% if g.get('notifications', []) %}
+                                    {% for notification in g.get('notifications', []) %}
+                                    <li>
+                                        <a class="dropdown-item {% if not notification.read %}fw-bold{% endif %}" href="{{ notification.link }}">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            </div>
+                                            <p class="mb-1">{{ notification.message }}</p>
+                                        </a>
+                                    </li>
+                                    {% if not loop.last %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <li><a class="dropdown-item text-center" href="#">暂无通知</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="{{ url_for('notifications') }}">查看所有通知</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- 用户菜单项(已存在) -->
                         <div class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
@@ -98,6 +138,12 @@
                                     <span class="badge ms-1" style="background-color: {{ current_user.wearing_title.color }}">
                                         {{ current_user.wearing_title.name }}
                                     </span>
+                                {% endif %}
+                                {% if current_user.is_authenticated and g.get('unread_notifications_count', 0) > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ g.get('unread_notifications_count', 0) }}
+                                    <span class="visually-hidden">条未读通知</span>
+                                </span>
                                 {% endif %}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
@@ -156,6 +202,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/touch-optimizations.js') }}"></script>
     {% block extra_js %}{% endblock %}
     <script>
     // 搜索框相关功能
