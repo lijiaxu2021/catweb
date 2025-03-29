@@ -6,9 +6,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/post-enhancements.css') }}">
 <style>
-    /* 改进的页面载入动画 */
+    /* 改进的页面载入动画 - 更流畅 */
     .fade-in {
-        animation: fadeIn 1.5s ease forwards;
+        animation: fadeIn 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: 0;  /* 移除延迟 */
     }
     
     @keyframes fadeIn {
@@ -20,17 +21,19 @@
     .article-container {
         opacity: 0;
         transform: translateY(10px);
-        animation: smoothAppear 1.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        animation: smoothAppear 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: 0.05s;  /* 极小延迟创造层次感 */
     }
     
     @keyframes smoothAppear {
-        0% { opacity: 0; transform: translateY(15px); }
+        0% { opacity: 0; transform: translateY(10px); }
         100% { opacity: 1; transform: translateY(0); }
     }
     
-    /* 背景图片渐现效果 */
+    /* 背景图片渐现效果 - 更快显示 */
     .article-container::before {
-        animation: backgroundFadeIn 2.5s ease-in forwards;
+        animation: backgroundFadeIn 1.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: 0;  /* 立即开始 */
     }
     
     @keyframes backgroundFadeIn {
@@ -40,7 +43,8 @@
     
     /* 背景叠加层平滑显示 */
     .article-overlay {
-        animation: overlayFadeIn 2s ease-out forwards;
+        animation: overlayFadeIn 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: 0;  /* 立即开始 */
     }
     
     @keyframes overlayFadeIn {
@@ -51,34 +55,65 @@
     /* 标题文字优雅出现 */
     .post-header h1 {
         opacity: 0;
-        transform: translateY(-20px);
-        animation: titleSlideDown 2.2s ease 0.5s forwards;
+        transform: translateY(-10px);
+        animation: titleSlideDown 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: 0.15s;  /* 轻微延迟 */
     }
     
     @keyframes titleSlideDown {
-        0% { opacity: 0; transform: translateY(-20px); }
+        0% { opacity: 0; transform: translateY(-10px); }
         100% { opacity: 1; transform: translateY(0); }
     }
     
-    /* 文章内容逐段淡入 */
+    /* 文章内容平滑呈现 - 级联效果但更快 */
     .post-content > * {
         opacity: 0;
-        transform: translateY(15px);
-        animation: contentFadeIn 1.4s ease forwards;
-        animation-delay: calc(0.1s * var(--sequence-index, 0) + 0.8s);
+        transform: translateY(10px);
+        animation: contentFadeIn 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: calc(0.05s * var(--sequence-index, 0) + 0.2s);  /* 减少延迟基数 */
     }
     
     @keyframes contentFadeIn {
-        from { opacity: 0; transform: translateY(15px); }
+        from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
     
-    /* 改进的阅读进度条 */
+    /* 标签样式 - 更流畅的出现效果 */
+    .tag-badge {
+        opacity: 0;
+        transform: translateY(5px);
+        animation: tagAppear 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        animation-delay: calc(0.05s * var(--tag-index, 0) + 0.3s);  /* 减少延迟但保持序列 */
+    }
+    
+    @keyframes tagAppear {
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 附件行动画 - 更快的显示 */
+    tr[style*="animation: rowFadeIn"] {
+        animation-duration: 0.5s !important;
+        animation-delay: calc(0.05s * var(--row-index, 0) + 0.3s) !important;
+        animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    }
+    
+    /* 阅读进度条平滑更新 */
     .reading-bar {
         height: 4px;
         background: linear-gradient(90deg, #0d6efd, #6610f2);
         box-shadow: 0 0 8px rgba(102, 16, 242, 0.5);
-        transition: width 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+        transition: width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        opacity: 0.9;
+    }
+    
+    /* 整体页面加载完成后的额外效果 */
+    body.content-loaded .article-container {
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    
+    /* 提升交互响应的流畅度 */
+    .btn, .post-content a, .tag-badge {
+        transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
     }
     
     /* 链接悬停效果 */
@@ -373,30 +408,6 @@
         background-color: rgba(40, 42, 54, 0.8);
         border: 1px solid #44475a;
     }
-    
-    /* 标签样式 */
-    .tag-badge {
-        transition: all 0.5s ease;
-        animation: tagAppear 1s ease forwards;
-        animation-delay: calc(1.2s + 0.15s * var(--tag-index, 0));
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    
-    @keyframes tagAppear {
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .tag-badge:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    
-    /* 附件行动画 */
-    tr[style*="animation: rowFadeIn"] {
-        animation-duration: 0.8s !important;
-        animation-delay: calc(0.8s + 0.2s * var(--row-index, 0)) !important;
-    }
 </style>
 {% endblock %}
 
@@ -640,73 +651,57 @@
 </div>
 
 <script>
+// 优化动画加载和序列
 document.addEventListener('DOMContentLoaded', function() {
-    // 预加载背景图片
-    {% if post.background_image %}
-    const bgImage = new Image();
-    bgImage.src = "{{ url_for('static', filename='uploads/backgrounds/' + post.background_image) }}";
-    bgImage.onload = function() {
-        // 图片加载完成后添加载入动画类
-        document.querySelector('.article-container').classList.add('bg-loaded');
-    };
-    {% endif %}
+    // 为内容元素设置序列索引，控制流畅的流水线动画效果
+    const contentElements = document.querySelectorAll('.post-content > *');
+    contentElements.forEach((element, index) => {
+        element.style.setProperty('--sequence-index', index);
+    });
     
-    // 改进的滚动进度效果
+    // 为标签设置索引
+    const tags = document.querySelectorAll('.tag-badge');
+    tags.forEach((tag, index) => {
+        tag.style.setProperty('--tag-index', index);
+    });
+    
+    // 为附件行设置索引
+    const rows = document.querySelectorAll('tr[style*="animation: rowFadeIn"]');
+    rows.forEach((row, index) => {
+        row.style.setProperty('--row-index', index);
+    });
+    
+    // 立即添加页面载入完成类，不延迟触发动画
+    document.body.classList.add('content-loaded');
+    
+    // 滚动时平滑更新进度条
     const readingBar = document.querySelector('.reading-bar');
     const articleContainer = document.querySelector('.article-container');
     
     if (readingBar && articleContainer) {
-        // 初始隐藏进度条
-        readingBar.style.opacity = '0';
-        
         window.addEventListener('scroll', function() {
-            // 进度条显示与隐藏逻辑
+            // 只有用户开始滚动才显示进度条
             if (window.scrollY > 100) {
                 readingBar.style.opacity = '1';
             } else {
                 readingBar.style.opacity = '0';
             }
             
-            // 计算阅读进度
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const winScroll = window.pageYOffset || document.documentElement.scrollTop;
             const articleStart = articleContainer.offsetTop;
             const articleHeight = articleContainer.scrollHeight;
-            const currentPosition = winScroll - articleStart;
-            const scrollPercentage = Math.min(100, Math.max(0, (currentPosition / articleHeight) * 100));
+            const windowHeight = window.innerHeight;
             
-            readingBar.style.width = scrollPercentage + '%';
+            // 更精确的进度计算，考虑窗口高度
+            const scrollableDistance = articleHeight - windowHeight;
+            const currentPosition = winScroll - articleStart;
+            const scrollPercentage = Math.min(100, Math.max(0, (currentPosition / scrollableDistance) * 100));
+            
+            requestAnimationFrame(() => {
+                readingBar.style.width = scrollPercentage + '%';
+            });
         });
     }
-    
-    // 改进内容动画效果
-    const contentElements = document.querySelectorAll('.post-content > *');
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
-    };
-    
-    const appearObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const element = entry.target;
-                const delay = parseFloat(element.dataset.delay || 0);
-                
-                setTimeout(() => {
-                    element.classList.add('visible');
-                }, delay * 1000);
-                
-                observer.unobserve(element);
-            }
-        });
-    }, observerOptions);
-    
-    // 为每个内容元素设置延迟并观察它
-    contentElements.forEach((element, index) => {
-        // 设置递增的延迟
-        element.dataset.delay = 0.1 + (index * 0.05);
-        appearObserver.observe(element);
-    });
 });
 </script>
 
@@ -819,40 +814,6 @@ document.addEventListener('DOMContentLoaded', function() {
             tag.style.setProperty('--tag-index', index);
         });
     });
-</script>
-
-<script>
-// 设置序列索引以控制动画顺序
-document.addEventListener('DOMContentLoaded', function() {
-    // 为内容元素设置序列索引
-    const contentElements = document.querySelectorAll('.post-content > *');
-    contentElements.forEach((element, index) => {
-        element.style.setProperty('--sequence-index', index);
-    });
-    
-    // 为标签设置索引
-    const tags = document.querySelectorAll('.tag-badge');
-    tags.forEach((tag, index) => {
-        tag.style.setProperty('--tag-index', index);
-    });
-    
-    // 为附件行设置索引
-    const rows = document.querySelectorAll('tr[style*="animation: rowFadeIn"]');
-    rows.forEach((row, index) => {
-        row.style.setProperty('--row-index', index);
-    });
-    
-    // 改进的滚动进度效果
-    const readingBar = document.querySelector('.reading-bar');
-    if (readingBar) {
-        readingBar.style.transition = 'width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.8s ease'; // 平滑进度条
-    }
-    
-    // 添加页面载入完成类，触发主动画
-    setTimeout(() => {
-        document.body.classList.add('content-loaded');
-    }, 300);
-});
 </script>
 {% endblock %}
 
