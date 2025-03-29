@@ -133,11 +133,54 @@
     <!-- 添加操作反馈的Toast容器 -->
     <div class="toast-container" id="toast-container"></div>
     
-    <div class="card apple-card apple-animate apple-stagger-4 apple-hover-lift">
-        <div class="card-body p-4">
-            <form method="post" enctype="multipart/form-data">
-                {{ form.hidden_tag() }}
+    <form method="post" enctype="multipart/form-data" class="mb-4">
+        {{ form.csrf_token }}
+        
+        <!-- 文章分类与设置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">文章分类与设置</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">文章分类 <span class="text-danger">*</span></label>
+                            {{ form.category_id(class="form-select") }}
+                            {% if form.category_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.category_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">标签 <small class="text-muted">(用逗号分隔)</small></label>
+                            {{ form.tags(class="form-control", placeholder="技术,编程,Python") }}
+                            {% if form.tags.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.tags.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
                 
+                <div class="mb-3 form-check">
+                    {{ form.published(class="form-check-input") }}
+                    <label class="form-check-label" for="published">立即发布</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文章内容 -->
+        <div class="card apple-card apple-animate apple-stagger-4 apple-hover-lift">
+            <div class="card-body p-4">
                 <div class="mb-3">
                     <label for="{{ form.title.id }}" class="form-label">{{ form.title.label }}</label>
                     {{ form.title(class="form-control rounded-pill") }}
@@ -164,34 +207,23 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label for="{{ form.category_id.id }}" class="form-label">{{ form.category_id.label }}</label>
-                    {{ form.category_id(class="form-select rounded-pill") }}
-                    {% if form.category_id.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.category_id.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.tags.id }}" class="form-label">{{ form.tags.label }}</label>
-                    {{ form.tags(class="form-control rounded-pill") }}
-                    <div class="form-text">多个标签请用逗号分隔</div>
-                    {% if form.tags.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.tags.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3">
                     <label class="form-label">特色图片</label>
                     <input type="file" class="form-control rounded-pill" name="featured_image">
                     <div class="form-text">支持JPG、PNG、GIF格式，建议尺寸800x400</div>
+                </div>
+                
+                <!-- 修改背景图片的描述 -->
+                <div class="mb-3">
+                    <label for="background_image" class="form-label">文章背景图片 (可选)</label>
+                    <input type="file" class="form-control" id="background_image" name="background_image" accept="image/*">
+                    <div class="form-text">这将作为文章内容的背景图片，建议选择浅色或半透明图片以保证文本可读性。</div>
+                </div>
+                
+                <!-- 添加附件上传 -->
+                <div class="mb-3">
+                    <label for="attachments" class="form-label">文章附件 (可选，最多5个文件)</label>
+                    <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+                    <div class="form-text">允许的文件类型: 图片, PDF, Office文档, 压缩文件等。每个文件最大16MB。</div>
                 </div>
                 
                 <div class="form-group" style="min-height: 850px;">
@@ -206,29 +238,13 @@
                     {% endif %}
                 </div>
                 
-                <div class="mb-4 form-check">
-                    {{ form.published(class="form-check-input") }}
-                    <label class="form-check-label" for="{{ form.published.id }}">{{ form.published.label }}</label>
-                </div>
-                
-                <div class="mb-3 alert alert-info rounded-4">
-                    <p><i class="fas fa-info-circle"></i> <strong>图片上传提示：</strong></p>
-                    <ol>
-                        <li>点击编辑器工具栏中的图片按钮 <i class="fas fa-image"></i></li>
-                        <li>在弹出对话框中点击"上传"选项卡</li>
-                        <li>点击"选择文件"按钮选择本地图片</li>
-                        <li>点击"上传到服务器"按钮完成上传</li>
-                    </ol>
-                    <p>支持JPG、PNG、GIF等格式，单张图片最大5MB。</p>
-                </div>
-                
                 <div class="d-flex justify-content-between">
                     <a href="{{ url_for('my_posts') }}" class="btn btn-outline-secondary rounded-pill px-4">返回</a>
                     <button type="submit" class="btn btn-primary rounded-pill px-4">{{ form.submit.label }}</button>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
 {% endblock %}
 

@@ -1,22 +1,35 @@
 {% extends 'base.html' %}
 
-{% block title %}CSRF验证失败 - 测试博客{% endblock %}
+{% block title %}安全验证失败 - 博客{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <div class="alert alert-danger text-center">
-        <h1><i class="fas fa-exclamation-triangle"></i> CSRF验证失败</h1>
-        <p class="lead">{{ reason }}</p>
-        <hr>
-        <p>可能的原因:</p>
-        <ul class="list-unstyled">
-            <li>页面已过期，请尝试刷新</li>
-            <li>会话已过期，请尝试重新登录</li>
-            <li>表单提交不正确</li>
-        </ul>
-        <div class="mt-4">
-            <a href="javascript:history.back()" class="btn btn-outline-primary">返回上一页</a>
-            <a href="{{ url_for('index') }}" class="btn btn-primary ms-2">返回首页</a>
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center animate__animated animate__fadeIn">
+            <div class="error-container my-5">
+                <div class="animate__animated animate__shakeX animate__delay-1s">
+                    <i class="fas fa-shield-alt text-warning" style="font-size: 5rem;"></i>
+                </div>
+                <h1 class="display-4 fw-bold text-warning mt-3">安全验证失败</h1>
+                <p class="lead mb-4">您的表单可能已过期或存在安全问题。</p>
+                <div class="alert alert-info p-4 mb-4 rounded-4 text-start">
+                    <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i>可能的原因：</h5>
+                    <ul class="mt-3">
+                        <li>页面打开时间过长，安全令牌已过期</li>
+                        <li>您可能使用了浏览器的后退按钮访问已提交的表单</li>
+                        <li>您的浏览器禁用了Cookie或不支持会话</li>
+                    </ul>
+                </div>
+                
+                <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg rounded-pill px-5 py-3">
+                        <i class="fas fa-home me-2"></i>返回首页
+                    </a>
+                    <button onclick="window.history.back()" class="btn btn-outline-secondary btn-lg rounded-pill px-5 py-3">
+                        <i class="fas fa-sync-alt me-2"></i>重新加载页面
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -67,49 +67,34 @@
 
 <div class="card rounded-4 shadow-sm mb-4">
     <div class="card-body">
-        <h4 class="card-title mb-3">我的称号</h4>
+        <h5 class="card-title mb-3">我的称号</h5>
         
-        <div class="mb-3">
-            <p class="mb-2">当前佩戴：</p>
-            {% if user.wearing_title %}
-            <div class="d-flex align-items-center mb-3">
-                <span class="badge me-2" style="background-color: {{ user.wearing_title.color }}; font-size: 1rem;">
-                    {{ user.wearing_title.name }}
-                </span>
-                <form method="post" action="{{ url_for('remove_wearing_title') }}" class="d-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
-                        <i class="fas fa-times"></i> 取消佩戴
-                    </button>
-                </form>
-            </div>
-            {% else %}
-            <p class="text-muted fst-italic">未佩戴任何称号</p>
-            {% endif %}
-        </div>
-        
-        {% if user.titles %}
-        <div class="mb-3">
-            <p class="mb-2">可选称号：</p>
-            <div class="row">
-                {% for title in user.titles %}
-                {% if title.id != user.wearing_title_id %}
-                <div class="col-auto mb-2">
-                    <form method="post" action="{{ url_for('wear_title', title_id=title.id) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-outline-secondary rounded-pill">
-                            <span class="badge me-1" style="background-color: {{ title.color }}">{{ title.name }}</span>
-                            <i class="fas fa-check-circle ms-1"></i>
-                        </button>
-                    </form>
-                </div>
+        <form method="post" action="{{ url_for('update_wearing_titles') }}">
+            {{ form.csrf_token }}
+            
+            <!-- 用户拥有的称号列表 -->
+            <div class="my-titles mb-3">
+                {% if current_user.titles %}
+                    <p>选择要佩戴的称号（可多选）：</p>
+                    <div class="form-check">
+                        {% for title in current_user.titles %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="wearing_titles" 
+                                   value="{{ title.id }}" id="title-{{ title.id }}"
+                                   {% if title in current_user.get_wearing_titles() %}checked{% endif %}>
+                            <label class="form-check-label" for="title-{{ title.id }}">
+                                <span class="badge" style="background-color: {{ title.color }}">{{ title.name }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">您还没有获得任何称号。</p>
                 {% endif %}
-                {% endfor %}
             </div>
-        </div>
-        {% else %}
-        <p class="text-muted fst-italic">您还没有获得任何称号</p>
-        {% endif %}
+            
+            <button type="submit" class="btn btn-primary rounded-pill">保存称号设置</button>
+        </form>
     </div>
 </div>
 
@@ -156,14 +141,22 @@
 
 <!-- 在可选称号部分添加预览功能 -->
 <div class="mb-4">
-    <h5>称号预览</h5>
+    <h5>称号预览效果</h5>
     <div class="preview-box p-3 border rounded">
         <div class="d-flex align-items-center">
-            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" 
-                 class="rounded-circle me-2" width="32" height="32" alt="{{ user.username }}">
-            <span>{{ user.username }}</span>
-            <span id="previewTitle" class="badge ms-2" style="background-color: {{ user.wearing_title.color if user.wearing_title else '#6c757d' }};">
-                {{ user.wearing_title.name if user.wearing_title else '预览称号' }}
+            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                 class="rounded-circle me-2" width="32" height="32" alt="{{ current_user.username }}">
+            <span>{{ current_user.username }}</span>
+            <span id="titlePreviewArea">
+                {% if current_user.get_wearing_titles() %}
+                    {% for title in current_user.get_wearing_titles() %}
+                        <span class="badge ms-1" style="background-color: {{ title.color }}">
+                            {{ title.name }}
+                        </span>
+                    {% endfor %}
+                {% else %}
+                    <span class="text-muted">未选择称号</span>
+                {% endif %}
             </span>
         </div>
     </div>
@@ -172,23 +165,56 @@
 <script>
 // 添加JavaScript实现称号预览
 document.addEventListener('DOMContentLoaded', function() {
-    const titleButtons = document.querySelectorAll('.btn-outline-secondary');
+    const titleCheckboxes = document.querySelectorAll('input[name="wearing_titles"]');
     const previewTitle = document.getElementById('previewTitle');
-    const originalColor = previewTitle.style.backgroundColor;
-    const originalText = previewTitle.textContent;
     
-    titleButtons.forEach(button => {
-        const badge = button.querySelector('.badge');
-        button.addEventListener('mouseenter', function() {
-            previewTitle.style.backgroundColor = badge.style.backgroundColor;
-            previewTitle.textContent = badge.textContent;
+    if (previewTitle) {
+        const originalColor = previewTitle.style.backgroundColor;
+        const originalText = previewTitle.textContent;
+        
+        titleCheckboxes.forEach(checkbox => {
+            const label = document.querySelector(`label[for="${checkbox.id}"]`);
+            const badge = label.querySelector('.badge');
+            
+            checkbox.addEventListener('change', function() {
+                updatePreview();
+            });
         });
         
-        button.addEventListener('mouseleave', function() {
-            previewTitle.style.backgroundColor = originalColor;
-            previewTitle.textContent = originalText;
-        });
-    });
+        function updatePreview() {
+            const selectedTitles = [];
+            titleCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    const label = document.querySelector(`label[for="${checkbox.id}"]`);
+                    const badge = label.querySelector('.badge');
+                    selectedTitles.push({
+                        text: badge.textContent.trim(),
+                        color: badge.style.backgroundColor
+                    });
+                }
+            });
+            
+            // 清空预览区域
+            const previewArea = document.getElementById('titlePreviewArea');
+            previewArea.innerHTML = '';
+            
+            // 添加新的预览称号
+            selectedTitles.forEach(title => {
+                const span = document.createElement('span');
+                span.className = 'badge ms-1';
+                span.style.backgroundColor = title.color;
+                span.textContent = title.text;
+                previewArea.appendChild(span);
+            });
+            
+            if (selectedTitles.length === 0) {
+                previewArea.innerHTML = '<span class="text-muted">未选择称号</span>';
+            }
+        }
+        
+        // 初始预览
+        updatePreview();
+    }
 });
 </script>
 {% endblock %} 

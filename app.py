@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort, g
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, abort, g, send_file
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, timezone
@@ -70,7 +70,8 @@ app.config['CKEDITOR_FILE_UPLOADER'] = 'upload'
 app.config['CKEDITOR_ENABLE_CSRF'] = True
 app.config['CKEDITOR_IMAGE_UPLOADER'] = True
 app.config['CKEDITOR_ENABLE_CODESNIPPET'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # 设置会话过期时间,例如7天
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # 设置会话过期时间,例如30天
+app.config['WTF_CSRF_TIME_LIMIT'] = 60 * 60 * 24 * 7  # 7天，以秒为单位
 
 # 添加所有可用的插件
 app.config['CKEDITOR_EXTRA_PLUGINS'] = [
@@ -93,7 +94,6 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600 * 24  # 将CSRF令牌有效期设为24小时
 app.config['WTF_CSRF_SSL_STRICT'] = False  # 如果不是HTTPS环境，设为False
 ckeditor = CKEditor(app)
 login_manager = LoginManager(app)
@@ -152,6 +152,13 @@ user_titles = db.Table('user_titles',
     db.Column('granted_at', db.DateTime, default=datetime.utcnow)
 )
 
+# 用户-佩戴称号关联表（多对多）
+user_wearing_titles = db.Table('user_wearing_titles',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('title_id', db.Integer, db.ForeignKey('title.id'), primary_key=True),
+    db.Column('display_order', db.Integer, default=0)  # 显示顺序
+)
+
 # 用户模型
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -166,10 +173,28 @@ class User(UserMixin, db.Model):
     comments = db.relationship('Comment', back_populates='author', lazy=True)
     titles = db.relationship('Title', secondary='user_titles', back_populates='users')
     
-    # 添加当前佩戴的称号ID
+    # 修改为多个佩戴称号
+    wearing_titles = db.relationship('Title', secondary='user_wearing_titles', 
+                                     backref=db.backref('wearing_users', lazy='dynamic'),
+                                     lazy='joined')
+    
+    # 只保留一个wearing_title_id字段定义
     wearing_title_id = db.Column(db.Integer, db.ForeignKey('title.id'), nullable=True)
     wearing_title = db.relationship('Title', foreign_keys=[wearing_title_id])
-    # liked_posts = db.relationship('Post', secondary='post_likes', back_populates='likes', lazy='dynamic')
+    
+    # 添加方法获取所有佩戴称号
+    def get_wearing_titles(self):
+        """获取用户正在佩戴的所有称号"""
+        # 优先使用新系统
+        if hasattr(self, 'wearing_titles') and self.wearing_titles:
+            return self.wearing_titles
+        # 兼容旧系统
+        elif self.wearing_title:
+            return [self.wearing_title]
+        return []
+    
+    # 移除重复的wearing_title_id定义
+    # wearing_title_id = db.Column(db.Integer, db.ForeignKey('title.id'), nullable=True)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -232,7 +257,8 @@ class Post(db.Model):
     # likes = db.relationship('User', secondary='post_likes', back_populates='liked_posts', lazy='dynamic')
     author = db.relationship('User', back_populates='posts', foreign_keys=[author_id])
     is_featured = db.Column(db.Boolean, default=False)
-
+    background_image = db.Column(db.String(255), nullable=True)
+    
     def __repr__(self):
         return f'<Post {self.title}>'
 
@@ -275,13 +301,13 @@ class SiteSetting(db.Model):
 
 # 文章表单
 class PostForm(FlaskForm):
-    title = StringField('标题', validators=[DataRequired(), Length(min=3, max=100)])
-    summary = TextAreaField('摘要', validators=[Length(max=200)])
-    content = CKEditorField('内容', validators=[DataRequired()])
+    title = StringField('文章标题', validators=[DataRequired(), Length(min=3, max=100)])
     category_id = SelectField('分类', coerce=int, validators=[DataRequired()])
-    tags = StringField('标签 (用逗号分隔)')
-    published = BooleanField('发布')
-    submit = SubmitField('保存')
+    tags = StringField('标签')
+    summary = TextAreaField('摘要', validators=[Length(max=200)])
+    content = CKEditorField('文章内容', validators=[DataRequired()])
+    published = BooleanField('立即发布', default=True)
+    submit = SubmitField('保存文章')
 
 # 登录表单
 class LoginForm(FlaskForm):
@@ -1031,74 +1057,131 @@ def my_posts():
     return render_template('my_posts.html', posts=posts)
 
 # 创建新文章
-@app.route('/create-post', methods=['GET', 'POST'])
+@app.route('/create_post', methods=['GET', 'POST'])
 @login_required
 def create_post():
     form = PostForm()
+    # 添加分类选择项
     form.category_id.choices = [(c.id, c.name) for c in Category.query.all()]
     
     if form.validate_on_submit():
-        # 处理标签
-        tag_names = [t.strip() for t in form.tags.data.split(',') if t.strip()]
-        post_tags = []
-        for tag_name in tag_names:
-            tag = Tag.query.filter_by(name=tag_name).first()
-            if not tag:
-                tag = Tag(name=tag_name, slug=slugify(tag_name))
-                db.session.add(tag)
-            post_tags.append(tag)
+        try:
+            # 添加调试信息
+            print(f"表单验证通过，开始处理数据: {form.data}")
             
-        # 处理特色图片
-        featured_image = 'default_post.jpg'
-        if 'featured_image' in request.files:
-            file = request.files['featured_image']
-            if file and file.filename:
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-                featured_image = filename
+            # 处理标签
+            tag_names = []
+            if form.tags.data:  # 确保tags有值
+                tag_names = [t.strip() for t in form.tags.data.split(',') if t.strip()]
+            post_tags = []
+            for tag_name in tag_names:
+                tag = Tag.query.filter_by(name=tag_name).first()
+                if not tag:
+                    tag = Tag(name=tag_name, slug=slugify(tag_name))
+                    db.session.add(tag)
+                post_tags.append(tag)
+            
+            # 处理背景图片上传
+            background_image = None
+            if 'background_image' in request.files and request.files['background_image'].filename:
+                background_image = handle_file_upload(request.files['background_image'], 'backgrounds')
                 
-        # 创建文章
-        slug = slugify(form.title.data)
-        # 检查slug是否已存在
-        if Post.query.filter_by(slug=slug).first():
-            slug = f"{slug}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            # 处理特色图片
+            featured_image = 'default_post.jpg'
+            if 'featured_image' in request.files:
+                file = request.files['featured_image']
+                if file and file.filename:
+                    filename = secure_filename(file.filename)
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+                    featured_image = filename
             
-        post = Post(
-            title=form.title.data,
-            slug=slug,
-            content=form.content.data,
-            summary=form.summary.data or form.content.data[:150] + '...',
-            featured_image=featured_image,
-            published=form.published.data,
-            author_id=current_user.id,
-            category_id=form.category_id.data
-        )
-        
-        # 添加标签
-        for tag in post_tags:
-            post.tags.append(tag)
+            # 创建文章
+            slug = slugify(form.title.data)
+            # 检查slug是否已存在
+            if Post.query.filter_by(slug=slug).first():
+                slug = f"{slug}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
-        db.session.add(post)
-        db.session.commit()
-        
-        flash('文章创建成功！', 'success')
-        return redirect(url_for('post', slug=post.slug))
+            print(f"准备创建文章: {form.title.data}, 分类ID: {form.category_id.data}")
+            
+            post = Post(
+                title=form.title.data,
+                slug=slug,
+                content=form.content.data,
+                summary=form.summary.data or form.content.data[:150] + '...',
+                featured_image=featured_image,
+                background_image=background_image,
+                published=form.published.data,
+                author_id=current_user.id,
+                category_id=form.category_id.data
+            )
+            
+            # 添加标签
+            for tag in post_tags:
+                post.tags.append(tag)
+            
+            db.session.add(post)
+            db.session.commit()
+            print(f"文章创建成功: ID={post.id}, Slug={post.slug}")
+            
+            # 处理附件上传
+            if 'attachments' in request.files:
+                files = request.files.getlist('attachments')
+                attachment_count = 0
+                for file in files:
+                    if file.filename:
+                        try:
+                            attachment_filename = handle_file_upload(file, 'attachments')
+                            if attachment_filename:
+                                # 获取文件大小和类型
+                                file.seek(0, os.SEEK_END)
+                                file_size = file.tell()
+                                file.seek(0)
+                                
+                                attachment = PostAttachment(
+                                    post_id=post.id,
+                                    filename=attachment_filename,
+                                    original_filename=file.filename,
+                                    file_size=file_size,
+                                    file_type=file.content_type if hasattr(file, 'content_type') else 'application/octet-stream'
+                                )
+                                db.session.add(attachment)
+                                attachment_count += 1
+                                
+                                print(f"添加附件: {file.filename}")
+                        except Exception as e:
+                            print(f"附件处理错误: {str(e)}")
+                
+                if attachment_count > 0:
+                    db.session.commit()
+                    print(f"成功添加 {attachment_count} 个附件")
+            
+            flash('文章创建成功！', 'success')
+            return redirect(url_for('post', slug=post.slug))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"创建文章时发生错误: {str(e)}")
+            flash(f'创建文章时发生错误: {str(e)}', 'danger')
+    
+    # 如果表单验证失败，输出错误信息
+    if form.errors:
+        print(f"表单验证错误: {form.errors}")
     
     return render_template('create_post.html', form=form)
 
 # 编辑文章
-@app.route('/edit-post/<int:id>', methods=['GET', 'POST'])
+@app.route('/edit-post/<slug>', methods=['GET', 'POST'])
 @login_required
-def edit_post(id):
-    post = Post.query.get_or_404(id)
+def edit_post(slug):
+    post = Post.query.filter_by(slug=slug).first_or_404()
     
-    # 检查是否是作者或管理员
+    # 检查权限
     if post.author_id != current_user.id and not current_user.is_admin:
-        flash('您没有权限编辑该文章', 'danger')
-        return redirect(url_for('index'))
+        flash('你没有权限编辑这篇文章', 'danger')
+        return redirect(url_for('post', slug=slug))
     
-    form = PostForm()
+    form = PostForm(obj=post)
     form.category_id.choices = [(c.id, c.name) for c in Category.query.all()]
     
     if form.validate_on_submit():
@@ -1121,7 +1204,19 @@ def edit_post(id):
                 file.save(file_path)
                 post.featured_image = filename
         
-        # 更新文章
+        # 处理背景图片
+        if 'background_image' in request.files:
+            file = request.files['background_image']
+            if file and file.filename:
+                background_image = handle_file_upload(file, 'backgrounds')
+                if background_image:
+                    post.background_image = background_image
+        
+        # 检查是否要移除背景图片
+        if 'remove_background' in request.form and request.form['remove_background'] == 'on':
+            post.background_image = None
+        
+        # 更新文章基本信息
         post.title = form.title.data
         post.content = form.content.data
         post.summary = form.summary.data or form.content.data[:150] + '...'
@@ -1133,17 +1228,44 @@ def edit_post(id):
         for tag in post_tags:
             post.tags.append(tag)
         
+        # 处理附件上传
+        if 'attachments' in request.files:
+            files = request.files.getlist('attachments')
+            for file in files:
+                if file.filename:
+                    attachment_filename = handle_file_upload(file, 'attachments')
+                    if attachment_filename:
+                        try:
+                            # 获取文件大小和类型
+                            file.seek(0, os.SEEK_END)
+                            file_size = file.tell()
+                            file.seek(0)
+                            
+                            attachment = PostAttachment(
+                                post_id=post.id,
+                                filename=attachment_filename,
+                                original_filename=file.filename,
+                                file_size=file_size,
+                                file_type=file.content_type if hasattr(file, 'content_type') else 'application/octet-stream'
+                            )
+                            db.session.add(attachment)
+                        except Exception as e:
+                            print(f"附件处理错误: {str(e)}")
+        
+        # 处理删除附件
+        if 'remove_attachments' in request.form:
+            attachment_ids = request.form.getlist('remove_attachments')
+            for attachment_id in attachment_ids:
+                attachment = PostAttachment.query.get(int(attachment_id))
+                if attachment and attachment.post_id == post.id:
+                    db.session.delete(attachment)
+        
         db.session.commit()
         flash('文章更新成功！', 'success')
         return redirect(url_for('post', slug=post.slug))
     
-    # GET请求，填充表单
-    form.title.data = post.title
-    form.content.data = post.content
-    form.summary.data = post.summary
-    form.published.data = post.published
-    form.category_id.data = post.category_id
-    form.tags.data = ', '.join([tag.name for tag in post.tags])
+    # 设置表单初始数据
+    form.tags.data = ','.join([tag.name for tag in post.tags])
     
     return render_template('edit_post.html', form=form, post=post)
 
@@ -2794,8 +2916,17 @@ def update_permissions_no_csrf(user_id):
 # 添加CSRF错误处理器，使错误消息更友好
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    app.logger.warning(f'CSRF错误: {str(e)}')
-    return render_template('errors/csrf_error.html', reason=e.description), 400
+    """改进 CSRF 错误处理，提供更友好的用户体验"""
+    # 记录 CSRF 错误
+    app.logger.warning(f"CSRF 错误: {e.description}, 路径: {request.path}, IP: {request.remote_addr}")
+    
+    # 检查是否是 AJAX 请求
+    if request.is_xhr or request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return jsonify({"error": "表单已过期，请刷新页面后重试", "code": "csrf_error"}), 400
+    
+    # 普通请求返回友好的错误页面
+    flash('表单已过期，请刷新页面后重试。', 'danger')
+    return redirect(request.referrer or url_for('index'))
 
 # 在app.py中添加以下代码来处理geoip2模块缺失的情况
 try:
@@ -3253,39 +3384,292 @@ def handle_csrf_error(e):
     flash('表单已过期，请刷新页面后重试。', 'danger')
     return redirect(request.referrer or url_for('index'))
 
+@app.route('/refresh-csrf-token')
+def refresh_csrf_token():
+    """刷新 CSRF 令牌的路由"""
+    return jsonify({'csrf_token': generate_csrf()})
+
+@app.before_request
+def make_session_permanent():
+    """设置会话为永久性，但遵循 PERMANENT_SESSION_LIFETIME 配置"""
+    session.permanent = True
+    
+    # 如果是POST请求，确保会话不会在请求处理过程中过期
+    if request.method == 'POST':
+        # 刷新会话，重置过期时间
+        session.modified = True
+
+@app.route('/upload-profile-pic', methods=['POST'])
+@login_required
+@csrf.exempt  # 使用装饰器豁免
+def upload_profile_pic():
+    """专门处理头像上传的路由"""
+    # 刷新会话
+    session.modified = True
+    
+    # 文件上传处理
+    if 'profile_pic' not in request.files:
+        flash('没有选择文件', 'warning')
+        return redirect(request.referrer or url_for('edit_profile'))
+    
+    file = request.files['profile_pic']
+    if file.filename == '':
+        flash('没有选择文件', 'warning')
+        return redirect(request.referrer or url_for('edit_profile'))
+    
+    if file:
+        # 处理文件上传逻辑
+        filename = secure_filename(file.filename)
+        # 生成唯一文件名
+        unique_filename = f"{current_user.username}_{int(time.time())}{os.path.splitext(filename)[1]}"
+        
+        # 保存文件
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(filepath)
+        
+        # 处理图片（缩放等）
+        try:
+            img = Image.open(filepath)
+            img = img.convert('RGB')  # 转换为RGB模式
+            
+            # 缩放到合适大小
+            img.thumbnail((500, 500))
+            img.save(filepath, quality=85)
+        except Exception as e:
+            app.logger.error(f"处理图片时出错: {str(e)}")
+        
+        # 更新用户头像记录
+        current_user.profile_pic = unique_filename
+        db.session.commit()
+        
+        # 添加日志
+        log = SystemLog(
+            user_id=current_user.id,
+            action='update_profile',
+            details=f'更新了头像',
+            ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        flash('头像已成功更新', 'success')
+    
+    # 返回到个人资料编辑页
+    return redirect(url_for('edit_profile'))
+
+@app.route('/posts')
+def all_posts():
+    """显示所有文章的页面"""
+    page = request.args.get('page', 1, type=int)
+    # 获取排序方式，默认按发布时间降序
+    sort = request.args.get('sort', 'newest')
+    # 支持自定义每页显示数量
+    per_page = request.args.get('per_page', 12, type=int)
+    # 限制每页数量范围，避免极端值
+    per_page = min(max(per_page, 4), 48)  # 最少4篇，最多48篇
+    
+    # 准备查询
+    query = Post.query.filter_by(published=True)
+    
+    # 根据排序参数调整查询
+    if sort == 'oldest':
+        query = query.order_by(Post.created_at.asc())
+    elif sort == 'views':
+        query = query.order_by(Post.views.desc())
+    else:  # 默认是newest
+        query = query.order_by(Post.created_at.desc())
+    
+    # 执行分页查询，使用动态的per_page参数
+    posts = query.paginate(page=page, per_page=per_page)
+    
+    # 获取侧边栏数据
+    categories = Category.query.all()
+    # 修改查询以包含颜色
+    popular_tags = db.session.query(
+        Tag.id, Tag.name, Tag.slug, Tag.color, func.count(post_tags.c.post_id).label('post_count')
+    ).outerjoin(post_tags, post_tags.c.tag_id == Tag.id).group_by(Tag.id).all()
+    
+    return render_template(
+        'posts.html',
+        posts=posts,
+        sort=sort,
+        per_page=per_page,
+        categories=categories,
+        popular_tags=[{'id': t.id, 'name': t.name, 'slug': t.slug, 'count': t.post_count, 'color': t.color} for t in popular_tags]
+    )
+
+@app.route('/update-wearing-titles', methods=['POST'])
+@login_required
+def update_wearing_titles():
+    """更新用户正在佩戴的称号"""
+    # 获取选中的称号ID列表
+    title_ids = request.form.getlist('wearing_titles')
+    
+    try:
+        # 清空现有佩戴称号关系
+        db.session.execute(user_wearing_titles.delete().where(
+            user_wearing_titles.c.user_id == current_user.id
+        ))
+        
+        # 添加新的佩戴称号关系
+        for i, title_id in enumerate(title_ids):
+            db.session.execute(user_wearing_titles.insert().values(
+                user_id=current_user.id,
+                title_id=int(title_id),
+                display_order=i
+            ))
+        
+        # 更新兼容字段
+        if title_ids:
+            current_user.wearing_title_id = int(title_ids[0])
+        else:
+            current_user.wearing_title_id = None
+            
+        db.session.commit()
+        flash('称号设置已更新', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'更新称号设置失败: {str(e)}', 'danger')
+    
+    return redirect(url_for('profile'))
+
+@app.route('/api/user/<username>/preview')
+def user_preview(username):
+    """获取用户预览信息的API"""
+    user = User.query.filter_by(username=username).first_or_404()
+    
+    # 获取用户统计信息
+    posts_count = Post.query.filter_by(author_id=user.id, published=True).count()
+    comments_count = Comment.query.filter_by(author_id=user.id).count()
+    likes_received = db.session.query(func.count(post_likes.c.user_id))\
+        .join(Post, Post.id == post_likes.c.post_id)\
+        .filter(Post.author_id == user.id).scalar() or 0
+    
+    # 准备返回数据
+    user_data = {
+        'username': user.username,
+        'profile_pic': url_for('static', filename='uploads/' + user.profile_pic),
+        'bio': user.bio,
+        'joined_date': user.created_at.strftime('%Y-%m-%d'),
+        'posts_count': posts_count,
+        'comments_count': comments_count,
+        'likes_received': likes_received
+    }
+    
+    return jsonify({
+        'success': True,
+        'user': user_data
+    })
+
+# 创建文章附件模型
+class PostAttachment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)  # 文件大小（字节）
+    file_type = db.Column(db.String(100), nullable=False)  # 文件类型
+    download_count = db.Column(db.Integer, default=0)  # 下载次数
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    
+    # 建立与Post的关系
+    post = db.relationship('Post', backref=db.backref('attachments', cascade='all, delete-orphan'))
+
+# 添加文件上传处理函数
+def handle_file_upload(file, folder):
+    """处理上传文件并返回安全的文件名"""
+    if file and allowed_file(file.filename):
+        # 生成安全的文件名
+        filename = secure_filename(file.filename)
+        # 添加时间戳避免同名文件覆盖
+        name, ext = os.path.splitext(filename)
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        new_filename = f"{name}_{timestamp}{ext}"
+        
+        # 确保目录存在
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+        if not os.path.exists(upload_path):
+            os.makedirs(upload_path)
+        
+        # 保存文件
+        file_path = os.path.join(upload_path, new_filename)
+        file.save(file_path)
+        
+        return new_filename
+    return None
+
+# 检查文件类型是否允许
+def allowed_file(filename):
+    """检查文件类型是否允许上传"""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', 'txt'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/download/<int:attachment_id>')
+def download_attachment(attachment_id):
+    attachment = PostAttachment.query.get_or_404(attachment_id)
+    
+    # 增加下载计数
+    attachment.download_count += 1
+    db.session.commit()
+    
+    # 准备文件路径
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'attachments', attachment.filename)
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        flash('文件不存在', 'error')
+        return redirect(url_for('post', post_id=attachment.post_id))
+    
+    # 使用send_file发送文件
+    return send_file(
+        file_path, 
+        as_attachment=True,
+        download_name=attachment.original_filename,
+        mimetype=attachment.file_type
+    )
+
 if __name__ == '__main__':
+    # 确保上传目录存在
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     
+    # 创建必要的子目录
+    for folder in ['attachments', 'backgrounds']:
+        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            print(f"创建目录: {folder_path}")
+    
+    # 自动添加数据库列和表
     with app.app_context():
-        db.create_all()  # 创建所有缺少的表
-        create_initial_data()
-        
-        # 尝试创建 wearing_title_id 列
+        # 添加 background_image 列到 post 表
         try:
-            db.session.execute('ALTER TABLE user ADD COLUMN wearing_title_id INTEGER REFERENCES title(id)')
+            db.session.execute('ALTER TABLE post ADD COLUMN background_image VARCHAR(255)')
             db.session.commit()
-            print("成功添加 wearing_title_id 列")
+            print("成功添加 background_image 列到 post 表")
         except Exception as e:
             db.session.rollback()
-            print(f"列可能已存在: {e}")
+            print(f"background_image 列可能已存在: {e}")
         
-        # 尝试创建 tag.color 列
+        # 创建 post_attachment 表
         try:
-            db.session.execute('ALTER TABLE tag ADD COLUMN color VARCHAR(20) DEFAULT "#6c757d"')
+            db.session.execute('''
+            CREATE TABLE IF NOT EXISTS post_attachment (
+                id INTEGER PRIMARY KEY,
+                post_id INTEGER NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                original_filename VARCHAR(255) NOT NULL,
+                file_size INTEGER NOT NULL,
+                file_type VARCHAR(100) NOT NULL,
+                download_count INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE
+            )
+            ''')
             db.session.commit()
-            print("成功添加 tag.color 列")
+            print("成功创建 post_attachment 表")
         except Exception as e:
             db.session.rollback()
-            print(f"列可能已存在: {e}")
-        
-        # 添加 is_featured 列到 post 表
-        try:
-            db.session.execute('ALTER TABLE post ADD COLUMN is_featured BOOLEAN DEFAULT 0')
-            db.session.commit()
-            print("成功添加 is_featured 列")
-        except Exception as e:
-            db.session.rollback()
-            print(f"列可能已存在: {e}")
-        
+            print(f"post_attachment 表可能已存在: {e}")
+    
     app.run(debug=True)

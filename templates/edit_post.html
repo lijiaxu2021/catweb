@@ -1,29 +1,107 @@
 {% extends 'base.html' %}
 
-{% block title %}编辑文章 - 测试博客{% endblock %}
+{% block title %}编辑文章 - {{ post.title }}{% endblock %}
 
 {% block extra_css %}
 {{ ckeditor.load() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ckeditor-fix.css') }}">
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof CKEDITOR !== 'undefined') {
+            CKEDITOR.on('instanceReady', function(evt) {
+                var editor = evt.editor;
+                editor.resize('100%', 800);
+                
+                // 添加样式直接到编辑器iframe
+                try {
+                    var editorFrame = document.querySelector('.cke_wysiwyg_frame');
+                    if (editorFrame) {
+                        editorFrame.style.height = '800px';
+                        editorFrame.style.minHeight = '800px';
+                    }
+                    
+                    // 设置编辑区容器高度
+                    var editorContainer = document.querySelector('.cke_contents');
+                    if (editorContainer) {
+                        editorContainer.style.height = '800px !important';
+                        editorContainer.style.minHeight = '800px !important';
+                    }
+                } catch (e) {
+                    console.error('设置编辑器高度时出错:', e);
+                }
+            });
+        }
+    });
+</script>
 {{ ckeditor.config(name='content', custom_config={
-    'extraPlugins': 'uploadimage,image2',
-    'uploadUrl': '/upload',
-    'filebrowserUploadUrl': '/upload?type=Files',
-    'filebrowserImageUploadUrl': '/upload?type=Images'
+    'filebrowserUploadUrl': url_for('upload'),
+    'imageUploadUrl': url_for('upload'),
+    'toolbar': 'full',
+    'height': 800,
+    'width': '100%',
+    'autoGrow_minHeight': 800,
+    'autoGrow_maxHeight': 1200,
+    'autoGrow_onStartup': true
 }) }}
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1 class="mb-4">编辑文章</h1>
+    <h1 class="mb-4">编辑文章 - {{ post.title }}</h1>
     
-    <div class="card rounded-4 shadow-sm">
-        <div class="card-body p-4">
-            <form method="post" enctype="multipart/form-data">
-                {{ form.hidden_tag() }}
+    <!-- 图片库和工具部分与create_post.html相同... -->
+    
+    <form method="post" enctype="multipart/form-data" class="mb-4">
+        {{ form.csrf_token }}
+        
+        <!-- 文章分类与设置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">文章分类与设置</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">文章分类 <span class="text-danger">*</span></label>
+                            {{ form.category_id(class="form-select") }}
+                            {% if form.category_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.category_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">标签 <small class="text-muted">(用逗号分隔)</small></label>
+                            {{ form.tags(class="form-control", placeholder="技术,编程,Python") }}
+                            {% if form.tags.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.tags.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
                 
+                <div class="mb-3 form-check">
+                    {{ form.published(class="form-check-input") }}
+                    <label class="form-check-label" for="published">立即发布</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文章内容 -->
+        <div class="card mb-4">
+            <div class="card-body">
                 <div class="mb-3">
                     <label for="{{ form.title.id }}" class="form-label">{{ form.title.label }}</label>
-                    {{ form.title(class="form-control rounded-pill") }}
+                    {{ form.title(class="form-control") }}
                     {% if form.title.errors %}
                     <div class="invalid-feedback d-block">
                         {% for error in form.title.errors %}
@@ -35,7 +113,7 @@
                 
                 <div class="mb-3">
                     <label for="{{ form.summary.id }}" class="form-label">{{ form.summary.label }}</label>
-                    {{ form.summary(class="form-control rounded-3", rows=3) }}
+                    {{ form.summary(class="form-control", rows=3) }}
                     <div class="form-text">如果留空，将自动从文章内容截取</div>
                     {% if form.summary.errors %}
                     <div class="invalid-feedback d-block">
@@ -47,42 +125,78 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label for="{{ form.category_id.id }}" class="form-label">{{ form.category_id.label }}</label>
-                    {{ form.category_id(class="form-select rounded-pill") }}
-                    {% if form.category_id.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.category_id.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.tags.id }}" class="form-label">{{ form.tags.label }}</label>
-                    {{ form.tags(class="form-control rounded-pill") }}
-                    <div class="form-text">多个标签请用逗号分隔</div>
-                    {% if form.tags.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.tags.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3">
                     <label class="form-label">特色图片</label>
-                    <div class="mb-2">
-                        <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" alt="{{ post.title }}" class="img-thumbnail" style="max-height: 150px;">
+                    <input type="file" class="form-control" name="featured_image">
+                    {% if post.featured_image %}
+                    <div class="mt-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-2">当前特色图片:</span>
+                            <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                                 class="img-thumbnail" style="max-height: 100px;">
+                        </div>
                     </div>
-                    <input type="file" class="form-control rounded-pill" name="featured_image">
-                    <div class="form-text">支持JPG、PNG、GIF格式，建议尺寸800x400。如不上传则保持原图</div>
+                    {% endif %}
+                    <div class="form-text">支持JPG、PNG、GIF格式，建议尺寸800x400</div>
                 </div>
                 
-                <div class="mb-4">
-                    <label for="{{ form.content.id }}" class="form-label">{{ form.content.label }}</label>
-                    {{ form.content(class="ckeditor") }}
+                <!-- 添加背景图片上传 -->
+                <div class="mb-3">
+                    <label for="background_image" class="form-label">文章背景图片 (可选)</label>
+                    <input type="file" class="form-control" id="background_image" name="background_image" accept="image/*">
+                    {% if post.background_image %}
+                    <div class="mt-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-info me-2">当前背景图片:</span>
+                            <img src="{{ url_for('static', filename='uploads/backgrounds/' + post.background_image) }}" 
+                                 class="img-thumbnail mt-2" style="max-height: 100px;">
+                            <div class="form-check ms-3">
+                                <input class="form-check-input" type="checkbox" id="remove_background" name="remove_background">
+                                <label class="form-check-label" for="remove_background">移除背景图片</label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="form-text">这将作为文章内容的背景图片，建议选择浅色或半透明图片以保证文本可读性。</div>
+                </div>
+                
+                <!-- 添加附件上传 -->
+                <div class="mb-3">
+                    <label for="attachments" class="form-label">添加附件 (可选)</label>
+                    <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+                    <div class="form-text">允许的文件类型: 图片, PDF, Office文档, 压缩文件等。每个文件最大16MB。</div>
+                    
+                    {% if post.attachments %}
+                    <div class="mt-3">
+                        <h6>现有附件:</h6>
+                        <ul class="list-group">
+                            {% for attachment in post.attachments %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-paperclip me-2"></i>
+                                    {{ attachment.original_filename }}
+                                    <span class="text-muted ms-2">({{ (attachment.file_size / 1024)|int }}KB)</span>
+                                </span>
+                                <div>
+                                    <span class="badge bg-primary rounded-pill me-2">
+                                        <i class="fas fa-download me-1"></i>{{ attachment.download_count }}
+                                    </span>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="remove_attachment_{{ attachment.id }}" 
+                                               name="remove_attachments" value="{{ attachment.id }}">
+                                        <label class="form-check-label" for="remove_attachment_{{ attachment.id }}">删除</label>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group" style="min-height: 850px;">
+                    <label for="{{ form.content.id }}" class="control-label">{{ form.content.label }}</label>
+                    {{ form.content(class="form-control", style="height: 800px; min-height: 800px;") }}
                     {% if form.content.errors %}
                     <div class="invalid-feedback d-block">
                         {% for error in form.content.errors %}
@@ -92,17 +206,12 @@
                     {% endif %}
                 </div>
                 
-                <div class="mb-4 form-check">
-                    {{ form.published(class="form-check-input") }}
-                    <label class="form-check-label" for="{{ form.published.id }}">{{ form.published.label }}</label>
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('post', slug=post.slug) }}" class="btn btn-outline-secondary">取消</a>
+                    <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
                 </div>
-                
-                <div class="d-flex justify-content-between">
-                    <a href="{{ url_for('my_posts') }}" class="btn btn-outline-secondary rounded-pill px-4">返回</a>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4">{{ form.submit.label }}</button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
 {% endblock %} 

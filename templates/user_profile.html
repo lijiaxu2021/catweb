@@ -19,6 +19,17 @@
                     <p class="text-muted">这个用户很懒，还没有填写个人简介...</p>
                     {% endif %}
                     
+                    <!-- 用户称号显示 -->
+                    <div class="badges mb-3">
+                        {% if user.get_wearing_titles() %}
+                            {% for title in user.get_wearing_titles() %}
+                                <span class="badge me-1" style="background-color: {{ title.color }}">
+                                    {{ title.name }}
+                                </span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
                     <div class="d-flex justify-content-center gap-3 mt-3">
                         <div class="text-center">
                             <h5>{{ post_count }}</h5>

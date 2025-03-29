@@ -42,3 +42,61 @@ WHERE post.published = 1 AND post.is_featured = 1 ORDER BY post.created_at DESC
 2025-03-27 21:45:33,604 INFO: 博客应用启动 [in G:\test111 25.3.5\app.py:115]
 2025-03-27 21:50:34,892 INFO: 博客应用启动 [in G:\test111 25.3.5\app.py:115]
 2025-03-27 21:50:36,488 INFO: 博客应用启动 [in G:\test111 25.3.5\app.py:115]
+2025-03-29 08:54:29,239 INFO: 博客应用启动 [in G:\test111 25.3.5 - 副本 (2)\app.py:115]
+2025-03-29 08:54:31,037 INFO: 博客应用启动 [in G:\test111 25.3.5 - 副本 (2)\app.py:115]
+2025-03-29 16:49:12,044 INFO: 博客应用启动 [in G:\test111 25.3.5 - 副本 (2) - 副本\app.py:115]
+2025-03-29 16:49:14,831 INFO: 博客应用启动 [in G:\test111 25.3.5 - 副本 (2) - 副本\app.py:115]
+2025-03-29 16:54:09,120 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 16:54:12,632 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 16:54:51,900 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 16:57:29,210 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 16:59:34,584 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:03:10,368 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:03:17,994 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:06:57,664 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:06:59,744 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:33:34,745 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:33:37,677 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:46:27,710 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:48:00,652 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 17:51:27,703 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:31:28,232 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:45:42,531 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:45:49,606 ERROR: 访问文章页面出错: (sqlite3.OperationalError) no such column: post.background_image
+[SQL: SELECT post.id AS post_id, post.title AS post_title, post.slug AS post_slug, post.content AS post_content, post.featured_image AS post_featured_image, post.summary AS post_summary, post.views AS post_views, post.published AS post_published, post.created_at AS post_created_at, post.updated_at AS post_updated_at, post.author_id AS post_author_id, post.category_id AS post_category_id, post.is_featured AS post_is_featured, post.background_image AS post_background_image 
+FROM post 
+WHERE post.slug = ?
+ LIMIT ? OFFSET ?]
+[parameters: ('6666', 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in G:\test111 25.3.291449\app.py:459]
+2025-03-29 18:45:53,752 ERROR: 获取精选文章错误: (sqlite3.OperationalError) no such column: post.background_image
+[SQL: SELECT post.id AS post_id, post.title AS post_title, post.slug AS post_slug, post.content AS post_content, post.featured_image AS post_featured_image, post.summary AS post_summary, post.views AS post_views, post.published AS post_published, post.created_at AS post_created_at, post.updated_at AS post_updated_at, post.author_id AS post_author_id, post.category_id AS post_category_id, post.is_featured AS post_is_featured, post.background_image AS post_background_image 
+FROM post 
+WHERE post.published = 1 AND post.is_featured = 1 ORDER BY post.created_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (5, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in G:\test111 25.3.291449\app.py:382]
+2025-03-29 18:45:54,141 ERROR: 获取精选文章错误: (sqlite3.OperationalError) no such column: post.background_image
+[SQL: SELECT post.id AS post_id, post.title AS post_title, post.slug AS post_slug, post.content AS post_content, post.featured_image AS post_featured_image, post.summary AS post_summary, post.views AS post_views, post.published AS post_published, post.created_at AS post_created_at, post.updated_at AS post_updated_at, post.author_id AS post_author_id, post.category_id AS post_category_id, post.is_featured AS post_is_featured, post.background_image AS post_background_image 
+FROM post 
+WHERE post.published = 1 AND post.is_featured = 1 ORDER BY post.created_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (5, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in G:\test111 25.3.291449\app.py:382]
+2025-03-29 18:54:47,513 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:54:49,569 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:54:49,888 ERROR: 获取精选文章错误: (sqlite3.OperationalError) no such column: post.background_image
+[SQL: SELECT post.id AS post_id, post.title AS post_title, post.slug AS post_slug, post.content AS post_content, post.featured_image AS post_featured_image, post.summary AS post_summary, post.views AS post_views, post.published AS post_published, post.created_at AS post_created_at, post.updated_at AS post_updated_at, post.author_id AS post_author_id, post.category_id AS post_category_id, post.is_featured AS post_is_featured, post.background_image AS post_background_image 
+FROM post 
+WHERE post.published = 1 AND post.is_featured = 1 ORDER BY post.created_at DESC
+ LIMIT ? OFFSET ?]
+[parameters: (5, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in G:\test111 25.3.291449\app.py:382]
+2025-03-29 18:56:11,998 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:56:16,815 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:56:56,436 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 18:58:10,444 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 19:02:10,882 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 19:04:53,790 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 19:11:09,497 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 19:11:11,320 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]

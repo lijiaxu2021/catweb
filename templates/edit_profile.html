@@ -2,22 +2,137 @@
 
 {% block title %}编辑个人资料 - 博客{% endblock %}
 
+{% block extra_css %}
+<style>
+    .avatar-container {
+        position: relative;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    
+    .avatar-container:hover .avatar-overlay {
+        opacity: 1;
+    }
+    
+    .avatar-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: all 0.3s ease;
+        border-radius: 50%;
+    }
+    
+    .form-control, .form-select {
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .animate-card {
+        animation: slideInUp 0.5s ease forwards;
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    
+    @keyframes slideInUp {
+        from { 
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-delay-1 {
+        animation-delay: 0.1s;
+    }
+    
+    .animate-delay-2 {
+        animation-delay: 0.3s;
+    }
+    
+    .animate-delay-3 {
+        animation-delay: 0.5s;
+    }
+    
+    .title-checkbox {
+        display: none;
+    }
+    
+    .title-label {
+        display: inline-block;
+        cursor: pointer;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .title-label .badge {
+        transition: all 0.3s ease;
+    }
+    
+    .title-checkbox:checked + .title-label .badge {
+        transform: scale(1.1);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="card rounded-4 shadow-sm animate-on-scroll">
+            <div class="card rounded-4 shadow-sm animate-card animate-delay-1">
                 <div class="card-body">
                     <h3 class="card-title mb-4">编辑个人资料</h3>
                     
-                    <form method="post" enctype="multipart/form-data">
+                    <!-- 头像上传部分 - 更好的UI -->
+                    <div class="mb-4 text-center">
+                        <div class="avatar-container">
+                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                                 alt="{{ current_user.username }}" id="profile-preview" class="rounded-circle img-thumbnail mb-3" 
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                            <div class="avatar-overlay">
+                                <i class="fas fa-camera fa-2x"></i>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <input type="file" id="profile-pic-input" class="d-none" accept="image/*">
+                            <button type="button" id="change-avatar-btn" class="btn btn-sm btn-outline-primary rounded-pill">
+                                <i class="fas fa-camera me-1"></i>更换头像
+                            </button>
+                            
+                            <!-- 上传状态指示器 -->
+                            <div id="upload-status" class="mt-2" style="display:none;">
+                                <div class="progress" style="height: 5px;">
+                                    <div id="upload-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small id="upload-message" class="text-muted">准备上传...</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 个人资料表单 - 不变 -->
+                    <form method="post" id="profile-form">
                         {{ form.hidden_tag() }}
                         
-                        <div class="mb-3 text-center">
-                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
-                                alt="{{ current_user.username }}" class="rounded-circle img-thumbnail mb-3" 
-                                style="width: 150px; height: 150px; object-fit: cover;">
-                        </div>
+                        <!-- 确保CSRF令牌始终存在 -->
+                        {% if not form.csrf_token %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% endif %}
                         
                         <div class="mb-3">
                             <label for="username" class="form-label">用户名</label>
@@ -50,19 +165,6 @@
                             <div class="form-text">简单介绍一下自己吧，最多200字</div>
                         </div>
                         
-                        <div class="mb-4">
-                            {{ form.profile_pic.label(class="form-label") }}
-                            {{ form.profile_pic(class="form-control rounded-pill") }}
-                            {% if form.profile_pic.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.profile_pic.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="form-text">支持JPG、PNG、GIF格式，建议使用正方形图片</div>
-                        </div>
-                        
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="{{ url_for('user_profile', username=current_user.username) }}" class="btn btn-outline-secondary rounded-pill me-md-2">
                                 取消
@@ -74,5 +176,182 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- 添加动画和UI增强到称号选择器 -->
+<div class="card rounded-4 shadow-sm mb-4 animate-card animate-delay-2">
+    <div class="card-body">
+        <h5 class="card-title mb-3">我的称号</h5>
+        
+        <form method="post" action="{{ url_for('update_wearing_titles') }}">
+            {{ form.csrf_token }}
+            
+            <!-- 用户拥有的称号列表 - 美化UI -->
+            <div class="my-titles mb-3">
+                {% if current_user.titles %}
+                    <p>选择要佩戴的称号（可多选）：</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for title in current_user.titles %}
+                        <div>
+                            <input class="title-checkbox" type="checkbox" name="wearing_titles" 
+                                   value="{{ title.id }}" id="title-{{ title.id }}"
+                                   {% if title in current_user.get_wearing_titles() %}checked{% endif %}>
+                            <label class="title-label" for="title-{{ title.id }}">
+                                <span class="badge" style="background-color: {{ title.color }}">{{ title.name }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">您还没有获得任何称号。</p>
+                {% endif %}
+            </div>
+            
+            <!-- 称号预览部分 - 添加更好的UI -->
+            <div class="mb-4">
+                <h5>称号预览效果</h5>
+                <div class="preview-box p-3 border rounded bg-light">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                             class="rounded-circle me-2" width="32" height="32" alt="{{ current_user.username }}">
+                        <span class="me-2">{{ current_user.username }}</span>
+                        <span id="titlePreviewArea" class="title-preview">
+                            {% if current_user.get_wearing_titles() %}
+                                {% for title in current_user.get_wearing_titles() %}
+                                    <span class="badge ms-1 title-badge" style="background-color: {{ title.color }}">
+                                        {{ title.name }}
+                                    </span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">未选择称号</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary rounded-pill">
+                <i class="fas fa-save me-1"></i>保存称号设置
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 简化的AJAX头像上传JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const profilePicInput = document.getElementById('profile-pic-input');
+    const changeAvatarBtn = document.getElementById('change-avatar-btn');
+    const profilePreview = document.getElementById('profile-preview');
+    const uploadStatus = document.getElementById('upload-status');
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadMessage = document.getElementById('upload-message');
+    
+    // 点击按钮选择文件
+    changeAvatarBtn.addEventListener('click', function() {
+        profilePicInput.click();
+    });
+    
+    // 文件选择后处理
+    profilePicInput.addEventListener('change', function() {
+        if (!this.files || !this.files[0]) return;
+        
+        const file = this.files[0];
+        
+        // 文件类型验证
+        if (!file.type.match('image.*')) {
+            alert('请选择图片文件');
+            return;
+        }
+        
+        // 显示上传状态
+        uploadStatus.style.display = 'block';
+        changeAvatarBtn.disabled = true;
+        changeAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>上传中...';
+        
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('profile_pic', file);
+        
+        // 实时预览
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            profilePreview.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+        
+        // 使用XMLHttpRequest上传（更好的进度支持）
+        const xhr = new XMLHttpRequest();
+        
+        // 进度处理
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                uploadProgress.style.width = percentComplete + '%';
+                uploadMessage.textContent = `上传中 ${Math.round(percentComplete)}%`;
+            }
+        });
+        
+        // 完成处理
+        xhr.addEventListener('load', function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                uploadMessage.textContent = '上传成功，页面即将刷新...';
+                uploadProgress.classList.add('bg-success');
+                
+                // 延迟刷新页面
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                uploadMessage.textContent = '上传失败: ' + xhr.statusText;
+                uploadProgress.classList.add('bg-danger');
+                
+                changeAvatarBtn.disabled = false;
+                changeAvatarBtn.innerHTML = '<i class="fas fa-camera me-1"></i>重试上传';
+            }
+        });
+        
+        // 错误处理
+        xhr.addEventListener('error', function() {
+            uploadMessage.textContent = '网络错误，上传失败';
+            uploadProgress.classList.add('bg-danger');
+            
+            changeAvatarBtn.disabled = false;
+            changeAvatarBtn.innerHTML = '<i class="fas fa-camera me-1"></i>重试上传';
+        });
+        
+        // 发送请求
+        xhr.open('POST', '{{ url_for("upload_profile_pic") }}');
+        xhr.send(formData);
+    });
+    
+    // 为称号选择添加动画效果
+    document.querySelectorAll('.title-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const label = document.querySelector(`label[for="${this.id}"]`);
+            if (this.checked) {
+                label.querySelector('.badge').classList.add('animate__animated', 'animate__pulse');
+                setTimeout(() => {
+                    label.querySelector('.badge').classList.remove('animate__animated', 'animate__pulse');
+                }, 1000);
+            }
+        });
+    });
+    
+    // 添加表单输入字段的焦点动画
+    document.querySelectorAll('.form-control, .form-select').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.closest('.mb-3').classList.add('animate__animated', 'animate__pulse');
+            setTimeout(() => {
+                this.closest('.mb-3').classList.remove('animate__animated', 'animate__pulse');
+            }, 1000);
+        });
+    });
+});
+</script>
+
+<div class="alert alert-info mt-3">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>提示：</strong> 如果上传头像时遇到问题，请确保图片格式为JPG、PNG或GIF，且大小不超过16MB。
 </div>
 {% endblock %} 
