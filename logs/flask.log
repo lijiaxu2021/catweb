@@ -100,3 +100,4 @@ WHERE post.published = 1 AND post.is_featured = 1 ORDER BY post.created_at DESC
 2025-03-29 19:04:53,790 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
 2025-03-29 19:11:09,497 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
 2025-03-29 19:11:11,320 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-29 20:29:10,550 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]

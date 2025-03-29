@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField, BooleanField, FileField
-from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional
+from wtforms import StringField, TextAreaField, PasswordField, SubmitField, SelectField, BooleanField, FileField, URLField
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional, URL
 from functools import wraps
 from slugify import slugify
 
@@ -297,7 +297,7 @@ class SiteSetting(db.Model):
     value = db.Column(db.Text)
     
     def __repr__(self):
-        return f"<Setting {self.key}>"
+        return f'<SiteSetting {self.key}>'
 
 # 文章表单
 class PostForm(FlaskForm):
@@ -897,53 +897,91 @@ def admin_toggle_user_admin(id):
 # 管理系统设置
 @app.route('/admin/settings', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_settings():
-    if not current_user.is_admin:
-        flash('您没有权限访问此页面', 'danger')
-        return redirect(url_for('index'))
-    
-    background_image = SiteSetting.query.filter_by(key='background_image').first()
+    # 获取当前设置
+    settings = {
+        'site_name': get_setting('site_name', '我的博客'),
+        'site_description': get_setting('site_description', '一个简洁的博客系统'),
+        'footer_text': get_setting('footer_text', '© 2025 我的博客'),
+        'background_image': get_setting('background_image', '')
+    }
     
     if request.method == 'POST':
-        # 处理其他设置...
+        # 获取表单数据
+        site_name = request.form.get('site_name')
+        site_description = request.form.get('site_description')
+        footer_text = request.form.get('footer_text')
         
-        # 处理背景图片上传
-        if 'background_image' in request.files and request.files['background_image'].filename:
-            background_file = request.files['background_image']
-            if background_file and allowed_file(background_file.filename, {'png', 'jpg', 'jpeg', 'gif'}):
-                # 确保背景目录存在
-                bg_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'background')
-                if not os.path.exists(bg_dir):
-                    os.makedirs(bg_dir)
-                
-                # 删除旧背景图片
-                if background_image and background_image.value:
-                    old_file = os.path.join(bg_dir, background_image.value)
+        # 更新设置
+        if site_name:
+            update_setting('site_name', site_name)
+            settings['site_name'] = site_name
+        
+        if site_description:
+            update_setting('site_description', site_description)
+            settings['site_description'] = site_description
+            
+        if footer_text:
+            update_setting('footer_text', footer_text)
+            settings['footer_text'] = footer_text
+        
+        # 处理背景图片删除
+        if 'remove_background' in request.form and request.form.get('remove_background'):
+            # 删除文件
+            old_background = get_setting('background_image', '')
+            if old_background:
+                try:
+                    old_file = os.path.join(app.config['UPLOAD_FOLDER'], 'backgrounds', old_background)
                     if os.path.exists(old_file):
                         os.remove(old_file)
-                
-                # 保存新背景图片
-                filename = secure_filename(background_file.filename)
-                filename = f"bg_{int(time.time())}_{filename}"  # 添加时间戳避免重名
-                background_file.save(os.path.join(bg_dir, filename))
-                
-                # 更新设置
-                if background_image:
-                    background_image.value = filename
-                else:
-                    background_image = SiteSetting(key='background_image', value=filename)
-                    db.session.add(background_image)
-                
-                db.session.commit()
-                flash('背景图片已更新', 'success')
+                except Exception as e:
+                    print(f"删除旧背景图片出错: {e}")
+            
+            # 更新设置
+            update_setting('background_image', '')
+            settings['background_image'] = ''
+            flash('背景图片已删除', 'success')
+        
+        # 处理首页背景图片上传
+        if 'background_image' in request.files:
+            background_file = request.files['background_image']
+            if background_file and background_file.filename:
+                # 直接检查文件扩展名
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+                file_ext = background_file.filename.rsplit('.', 1)[1].lower() if '.' in background_file.filename else ''
+                if file_ext in allowed_extensions:
+                    # 删除旧文件(如果存在)
+                    old_background = get_setting('background_image', '')
+                    if old_background:
+                        try:
+                            old_file = os.path.join(app.config['UPLOAD_FOLDER'], 'backgrounds', old_background)
+                            if os.path.exists(old_file):
+                                os.remove(old_file)
+                        except Exception as e:
+                            print(f"删除旧背景图片出错: {e}")
+                    
+                    # 保存新文件
+                    filename = secure_filename(background_file.filename)
+                    # 添加时间戳避免文件名冲突
+                    filename = f"{int(time.time())}_{filename}"
+                    # 确保上传目录存在
+                    upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'backgrounds')
+                    if not os.path.exists(upload_dir):
+                        os.makedirs(upload_dir)
+                    
+                    filepath = os.path.join(upload_dir, filename)
+                    background_file.save(filepath)
+                    
+                    # 更新设置
+                    update_setting('background_image', filename)
+                    settings['background_image'] = filename
+                    flash('背景图片已更新', 'success')
         
         return redirect(url_for('admin_settings'))
     
-    # 获取当前背景图片
-    background_image_value = background_image.value if background_image else None
-    
-    return render_template('admin/settings.html', 
-                          background_image=background_image_value)
+    # GET请求，显示设置页面
+    return render_template('admin/settings.html', settings=settings)
 
 # 添加注册路由
 @app.route('/register', methods=['GET', 'POST'])
@@ -1028,26 +1066,26 @@ def create_initial_data():
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    form = None  # 这里可以创建一个ProfileForm用于编辑个人资料
-    if request.method == 'POST':
-        # 处理个人资料更新逻辑
-        if 'profile_pic' in request.files:
-            file = request.files['profile_pic']
-            if file and file.filename:
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-                current_user.profile_pic = filename
+    form = ProfileForm(obj=current_user)
+    
+    if form.validate_on_submit():
+        # 检查用户名是否已被使用
+        if form.username.data != current_user.username and User.query.filter_by(username=form.username.data).first():
+            flash('该用户名已被使用', 'danger')
+            return render_template('profile.html', form=form, user=current_user)
         
-        current_user.username = request.form.get('username', current_user.username)
-        current_user.email = request.form.get('email', current_user.email)
-        current_user.bio = request.form.get('bio', current_user.bio)
+        # 更新用户资料
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        current_user.bio = form.bio.data
+        current_user.website = form.website.data
+        current_user.location = form.location.data
         
         db.session.commit()
         flash('个人资料已更新', 'success')
         return redirect(url_for('profile'))
     
-    return render_template('profile.html', user=current_user)
+    return render_template('profile.html', form=form, user=current_user)
 
 # 我的文章
 @app.route('/my-posts')
@@ -1379,9 +1417,7 @@ def upload():
 def allowed_file(filename, allowed_extensions=None):
     """检查文件是否有允许的扩展名"""
     if allowed_extensions is None:
-        # 默认允许的扩展名
-        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
-    
+        allowed_extensions = app.config.get('ALLOWED_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif'})
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
@@ -1580,9 +1616,11 @@ def user_profile(username):
 
 # 个人资料编辑表单
 class ProfileForm(FlaskForm):
-    email = StringField('邮箱', validators=[Optional(), Email()])
-    bio = TextAreaField('个人简介', validators=[Optional(), Length(max=200)])
-    profile_pic = FileField('头像', validators=[Optional()])
+    username = StringField('用户名', validators=[DataRequired(), Length(min=3, max=20)])
+    email = StringField('邮箱', validators=[DataRequired(), Email()])
+    bio = TextAreaField('个人简介', validators=[Length(max=200)])
+    website = StringField('个人网站', validators=[Optional(), URL()])
+    location = StringField('所在地', validators=[Optional(), Length(max=50)])
     submit = SubmitField('保存修改')
 
 @app.route('/edit-profile', methods=['GET', 'POST'])
@@ -3627,6 +3665,40 @@ def download_attachment(attachment_id):
         download_name=attachment.original_filename,
         mimetype=attachment.file_type
     )
+
+# 添加网站设置相关的辅助函数
+def get_setting(key, default=None):
+    """获取网站设置项的值"""
+    setting = SiteSetting.query.filter_by(key=key).first()
+    if setting:
+        return setting.value
+    return default
+
+def update_setting(key, value):
+    """更新或创建网站设置项"""
+    setting = SiteSetting.query.filter_by(key=key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = SiteSetting(key=key, value=value)
+        db.session.add(setting)
+    db.session.commit()
+
+# 添加模板上下文处理器
+@app.context_processor
+def inject_settings():
+    """将网站设置注入所有模板"""
+    settings = {}
+    for setting in SiteSetting.query.all():
+        settings[setting.key] = setting.value
+    
+    # 添加一些默认值
+    if 'site_name' not in settings:
+        settings['site_name'] = '我的博客'
+    if 'site_description' not in settings:
+        settings['site_description'] = '一个简洁的博客系统'
+    
+    return {'settings': settings}
 
 if __name__ == '__main__':
     # 确保上传目录存在

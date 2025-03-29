@@ -66,6 +66,22 @@
         }
     </style>
     {% block extra_css %}{% endblock %}
+    {% if settings and settings.background_image %}
+    <style>
+        body {
+            background-image: url("{{ url_for('static', filename='uploads/backgrounds/' + settings.background_image) }}");
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+        }
+        
+        /* 添加一个覆盖层，确保内容可读性 */
+        .content-wrapper {
+            background-color: rgba(255, 255, 255, 0.9);
+            min-height: 100vh;
+        }
+    </style>
+    {% endif %}
 </head>
 <body class="is-loading">
     <!-- Preloader HTML -->

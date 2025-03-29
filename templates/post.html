@@ -8,7 +8,7 @@
 <style>
     /* 改进的页面载入动画 */
     .fade-in {
-        animation: fadeIn 0.8s ease forwards;
+        animation: fadeIn 1.5s ease forwards;
     }
     
     @keyframes fadeIn {
@@ -20,17 +20,17 @@
     .article-container {
         opacity: 0;
         transform: translateY(10px);
-        animation: smoothAppear 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        animation: smoothAppear 1.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
     }
     
     @keyframes smoothAppear {
-        0% { opacity: 0; transform: translateY(10px); }
+        0% { opacity: 0; transform: translateY(15px); }
         100% { opacity: 1; transform: translateY(0); }
     }
     
     /* 背景图片渐现效果 */
     .article-container::before {
-        animation: backgroundFadeIn 1.2s ease-in forwards;
+        animation: backgroundFadeIn 2.5s ease-in forwards;
     }
     
     @keyframes backgroundFadeIn {
@@ -40,7 +40,7 @@
     
     /* 背景叠加层平滑显示 */
     .article-overlay {
-        animation: overlayFadeIn 1s ease-out forwards;
+        animation: overlayFadeIn 2s ease-out forwards;
     }
     
     @keyframes overlayFadeIn {
@@ -52,7 +52,7 @@
     .post-header h1 {
         opacity: 0;
         transform: translateY(-20px);
-        animation: titleSlideDown 1.1s ease 0.3s forwards;
+        animation: titleSlideDown 2.2s ease 0.5s forwards;
     }
     
     @keyframes titleSlideDown {
@@ -64,7 +64,8 @@
     .post-content > * {
         opacity: 0;
         transform: translateY(15px);
-        animation: contentFadeIn 0.7s ease forwards;
+        animation: contentFadeIn 1.4s ease forwards;
+        animation-delay: calc(0.1s * var(--sequence-index, 0) + 0.8s);
     }
     
     @keyframes contentFadeIn {
@@ -95,7 +96,7 @@
         bottom: -2px;
         left: 0;
         background-color: currentColor;
-        transition: width 0.3s ease;
+        transition: width 0.5s ease;
     }
     
     .post-content a:hover::after {
@@ -104,7 +105,7 @@
     
     /* 增强按钮触感 */
     .btn {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.35s ease, box-shadow 0.35s ease;
     }
     
     .btn:hover {
@@ -178,7 +179,7 @@
         background: linear-gradient(90deg, #0d6efd, #6f42c1);
         z-index: 1000;
         width: 0%;
-        transition: width 0.2s ease;
+        transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.8s ease;
     }
     
     @keyframes slideDown {
@@ -372,6 +373,30 @@
         background-color: rgba(40, 42, 54, 0.8);
         border: 1px solid #44475a;
     }
+    
+    /* 标签样式 */
+    .tag-badge {
+        transition: all 0.5s ease;
+        animation: tagAppear 1s ease forwards;
+        animation-delay: calc(1.2s + 0.15s * var(--tag-index, 0));
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    
+    @keyframes tagAppear {
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .tag-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    /* 附件行动画 */
+    tr[style*="animation: rowFadeIn"] {
+        animation-duration: 0.8s !important;
+        animation-delay: calc(0.8s + 0.2s * var(--row-index, 0)) !important;
+    }
 </style>
 {% endblock %}
 
@@ -481,8 +506,32 @@
                 </div>
                 
                 <!-- 文章页脚信息 -->
-                <div class="post-footer my-4 pt-3 border-top border-secondary">
-                    <!-- 原有的标签、分类等信息... -->
+                <div class="post-footer my-4 pt-3 border-top">
+                    <div class="d-flex flex-wrap align-items-center">
+                        <!-- 分类信息 -->
+                        <div class="me-4 mb-2">
+                            <i class="fas fa-folder-open text-muted me-1"></i>
+                            <a href="{{ url_for('category', slug=post.category.slug) }}" class="text-decoration-none">
+                                {{ post.category.name }}
+                            </a>
+                        </div>
+                        
+                        <!-- 标签列表 -->
+                        <div class="me-3 mb-2">
+                            <i class="fas fa-tags text-muted me-1"></i>
+                            {% if post.tags %}
+                                {% for tag in post.tags %}
+                                <a href="{{ url_for('tag', slug=tag.slug) }}" 
+                                   class="badge rounded-pill text-decoration-none tag-badge me-1"
+                                   style="background-color: {{ tag.color|default('#6c757d') }};">
+                                    {{ tag.name }}
+                                </a>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">无标签</span>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
             {% else %}
@@ -761,6 +810,50 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 8px 24px rgba(0,0,0,0.1);
 }
 </style>
+
+<script>
+    // 为标签添加顺序索引以实现交错动画
+    document.addEventListener('DOMContentLoaded', function() {
+        const tags = document.querySelectorAll('.tag-badge');
+        tags.forEach((tag, index) => {
+            tag.style.setProperty('--tag-index', index);
+        });
+    });
+</script>
+
+<script>
+// 设置序列索引以控制动画顺序
+document.addEventListener('DOMContentLoaded', function() {
+    // 为内容元素设置序列索引
+    const contentElements = document.querySelectorAll('.post-content > *');
+    contentElements.forEach((element, index) => {
+        element.style.setProperty('--sequence-index', index);
+    });
+    
+    // 为标签设置索引
+    const tags = document.querySelectorAll('.tag-badge');
+    tags.forEach((tag, index) => {
+        tag.style.setProperty('--tag-index', index);
+    });
+    
+    // 为附件行设置索引
+    const rows = document.querySelectorAll('tr[style*="animation: rowFadeIn"]');
+    rows.forEach((row, index) => {
+        row.style.setProperty('--row-index', index);
+    });
+    
+    // 改进的滚动进度效果
+    const readingBar = document.querySelector('.reading-bar');
+    if (readingBar) {
+        readingBar.style.transition = 'width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.8s ease'; // 平滑进度条
+    }
+    
+    // 添加页面载入完成类，触发主动画
+    setTimeout(() => {
+        document.body.classList.add('content-loaded');
+    }, 300);
+});
+</script>
 {% endblock %}
 
 {% block extra_js %}

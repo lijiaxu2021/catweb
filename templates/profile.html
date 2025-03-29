@@ -33,22 +33,67 @@
             <div class="card-body">
                 <h4 class="card-title mb-4">编辑个人资料</h4>
                 
-                <form method="post" action="{{ url_for('profile') }}" enctype="multipart/form-data">
-                    {{ csrf_token() }}
+                <form method="post" class="mb-4">
+                    {{ form.csrf_token }}
                     
                     <div class="mb-3">
                         <label for="username" class="form-label">用户名</label>
-                        <input type="text" class="form-control rounded-pill" id="username" name="username" value="{{ user.username }}">
+                        {{ form.username(class="form-control", id="username") }}
+                        {% if form.username.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.username.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
-                        <label for="email" class="form-label">电子邮箱</label>
-                        <input type="email" class="form-control rounded-pill" id="email" name="email" value="{{ user.email }}">
+                        <label for="email" class="form-label">邮箱</label>
+                        {{ form.email(class="form-control", id="email") }}
+                        {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.email.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
                         <label for="bio" class="form-label">个人简介</label>
-                        <textarea class="form-control rounded-3" id="bio" name="bio" rows="3">{{ user.bio }}</textarea>
+                        {{ form.bio(class="form-control", id="bio", rows=3) }}
+                        {% if form.bio.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.bio.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="website" class="form-label">个人网站</label>
+                        {{ form.website(class="form-control", id="website") }}
+                        {% if form.website.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.website.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">所在地</label>
+                        {{ form.location(class="form-control", id="location") }}
+                        {% if form.location.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.location.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-4">
@@ -57,7 +102,7 @@
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="submit" class="btn btn-primary rounded-pill px-4">保存更改</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">{{ form.submit.label }}</button>
                     </div>
                 </form>
             </div>
@@ -70,7 +115,7 @@
         <h5 class="card-title mb-3">我的称号</h5>
         
         <form method="post" action="{{ url_for('update_wearing_titles') }}">
-            {{ form.csrf_token }}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- 用户拥有的称号列表 -->
             <div class="my-titles mb-3">
