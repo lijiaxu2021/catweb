@@ -184,82 +184,85 @@
     <!-- 其他用户信息 -->
 </div>
 
-<!-- 在可选称号部分添加预览功能 -->
-<div class="mb-4">
-    <h5>称号预览效果</h5>
-    <div class="preview-box p-3 border rounded">
-        <div class="d-flex align-items-center">
-            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
-                 class="rounded-circle me-2" width="32" height="32" alt="{{ current_user.username }}">
-            <span>{{ current_user.username }}</span>
-            <span id="titlePreviewArea">
-                {% if current_user.get_wearing_titles() %}
-                    {% for title in current_user.get_wearing_titles() %}
-                        <span class="badge ms-1" style="background-color: {{ title.color }}">
-                            {{ title.name }}
-                        </span>
-                    {% endfor %}
-                {% else %}
-                    <span class="text-muted">未选择称号</span>
-                {% endif %}
-            </span>
-        </div>
+<!-- 称号预览区域样式改进 -->
+<style>
+.title-preview-area {
+    display: flex;
+    flex-wrap: wrap; /* 允许称号换行显示 */
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.title-preview-area .badge {
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    padding: 6px 10px;
+    white-space: normal; /* 允许称号文字换行 */
+    text-align: center;
+    max-width: 100%; /* 确保在小屏幕上也能完整显示 */
+}
+</style>
+
+<!-- 修改称号预览区域HTML -->
+<div class="title-preview-container mb-3">
+    <label class="form-label">称号预览效果</label>
+    <div id="titlePreviewArea" class="d-flex flex-wrap gap-2 p-3 border rounded">
+        <span class="text-muted">未选择称号</span>
     </div>
 </div>
 
+<!-- 修改预览脚本 -->
 <script>
-// 添加JavaScript实现称号预览
 document.addEventListener('DOMContentLoaded', function() {
+    // 获取所有称号复选框
     const titleCheckboxes = document.querySelectorAll('input[name="wearing_titles"]');
-    const previewTitle = document.getElementById('previewTitle');
+    const previewArea = document.getElementById('titlePreviewArea');
     
-    if (previewTitle) {
-        const originalColor = previewTitle.style.backgroundColor;
-        const originalText = previewTitle.textContent;
+    // 添加事件监听器
+    titleCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updatePreview);
+    });
+    
+    // 更新预览函数
+    function updatePreview() {
+        // 清空预览区域
+        previewArea.innerHTML = '';
         
+        // 获取选中的称号
+        const selected = [];
         titleCheckboxes.forEach(checkbox => {
-            const label = document.querySelector(`label[for="${checkbox.id}"]`);
-            const badge = label.querySelector('.badge');
-            
-            checkbox.addEventListener('change', function() {
-                updatePreview();
-            });
-        });
-        
-        function updatePreview() {
-            const selectedTitles = [];
-            titleCheckboxes.forEach(checkbox => {
-                if (checkbox.checked) {
-                    const label = document.querySelector(`label[for="${checkbox.id}"]`);
-                    const badge = label.querySelector('.badge');
-                    selectedTitles.push({
-                        text: badge.textContent.trim(),
+            if (checkbox.checked) {
+                const label = document.querySelector(`label[for="${checkbox.id}"]`);
+                const badge = label.querySelector('.badge');
+                if (badge) {
+                    selected.push({
+                        text: badge.textContent,
                         color: badge.style.backgroundColor
                     });
                 }
-            });
-            
-            // 清空预览区域
-            const previewArea = document.getElementById('titlePreviewArea');
-            previewArea.innerHTML = '';
-            
-            // 添加新的预览称号
-            selectedTitles.forEach(title => {
-                const span = document.createElement('span');
-                span.className = 'badge ms-1';
-                span.style.backgroundColor = title.color;
-                span.textContent = title.text;
-                previewArea.appendChild(span);
-            });
-            
-            if (selectedTitles.length === 0) {
-                previewArea.innerHTML = '<span class="text-muted">未选择称号</span>';
             }
-        }
+        });
         
-        // 初始预览
-        updatePreview();
+        // 显示选中的称号或默认文本
+        if (selected.length === 0) {
+            previewArea.innerHTML = '<span class="text-muted">未选择称号</span>';
+        } else {
+            selected.forEach(title => {
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.style.backgroundColor = title.color;
+                badge.textContent = title.text;
+                previewArea.appendChild(badge);
+            });
+        }
     }
+    
+    // 初始化预览
+    updatePreview();
 });
 </script>
 {% endblock %} 

@@ -1,0 +1,15 @@
+<!-- 修改文章卡片中的作者信息部分 -->
+<div class="card-footer bg-transparent d-flex align-items-center">
+    <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="rounded-circle me-2" width="30" height="30" alt="{{ post.author.username }}">
+    <div>
+        <div class="d-flex align-items-center flex-wrap">
+            <small class="text-muted">{{ post.author.username }}</small>
+            {% if post.author.wearing_title %}
+            <span class="badge ms-1" style="background-color: {{ post.author.wearing_title.color }}; font-size: 0.7rem;">
+                {{ post.author.wearing_title.name }}
+            </span>
+            {% endif %}
+        </div>
+        <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+    </div>
+</div> 
