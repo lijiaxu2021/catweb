@@ -126,7 +126,7 @@
                     </div>
                     
                     <!-- 个人资料表单 - 不变 -->
-                    <form method="post" id="profile-form">
+                    <form method="post" enctype="multipart/form-data" id="profile-form">
                         {{ form.hidden_tag() }}
                         
                         <!-- 确保CSRF令牌始终存在 -->
@@ -163,6 +163,18 @@
                             </div>
                             {% endif %}
                             <div class="form-text">简单介绍一下自己吧，最多200字</div>
+                        </div>
+                        
+                        <!-- 头像预览和上传 -->
+                        <div class="mb-4">
+                            <div class="profile-pic-preview mb-3">
+                                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                                     class="rounded-circle" width="150" height="150">
+                            </div>
+                            
+                            {{ form.profile_pic.label(class="form-label") }}
+                            {{ form.profile_pic(class="form-control") }}
+                            <small class="text-muted">支持JPG、PNG和GIF格式，建议使用正方形图片</small>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -240,89 +252,70 @@
 <!-- 简化的AJAX头像上传JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 获取相关元素
     const profilePicInput = document.getElementById('profile-pic-input');
     const changeAvatarBtn = document.getElementById('change-avatar-btn');
-    const profilePreview = document.getElementById('profile-preview');
     const uploadStatus = document.getElementById('upload-status');
     const uploadProgress = document.getElementById('upload-progress');
     const uploadMessage = document.getElementById('upload-message');
+    const avatarPreview = document.querySelector('.profile-avatar img');
     
-    // 点击按钮选择文件
+    // 点击更换头像按钮时触发文件选择
     changeAvatarBtn.addEventListener('click', function() {
         profilePicInput.click();
     });
     
-    // 文件选择后处理
+    // 当选择了文件时上传
     profilePicInput.addEventListener('change', function() {
-        if (!this.files || !this.files[0]) return;
-        
-        const file = this.files[0];
-        
-        // 文件类型验证
-        if (!file.type.match('image.*')) {
-            alert('请选择图片文件');
-            return;
-        }
-        
-        // 显示上传状态
-        uploadStatus.style.display = 'block';
-        changeAvatarBtn.disabled = true;
-        changeAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>上传中...';
-        
-        // 创建FormData
-        const formData = new FormData();
-        formData.append('profile_pic', file);
-        
-        // 实时预览
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            profilePreview.src = e.target.result;
-        }
-        reader.readAsDataURL(file);
-        
-        // 使用XMLHttpRequest上传（更好的进度支持）
-        const xhr = new XMLHttpRequest();
-        
-        // 进度处理
-        xhr.upload.addEventListener('progress', function(e) {
-            if (e.lengthComputable) {
-                const percentComplete = (e.loaded / e.total) * 100;
-                uploadProgress.style.width = percentComplete + '%';
-                uploadMessage.textContent = `上传中 ${Math.round(percentComplete)}%`;
-            }
-        });
-        
-        // 完成处理
-        xhr.addEventListener('load', function() {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                uploadMessage.textContent = '上传成功，页面即将刷新...';
-                uploadProgress.classList.add('bg-success');
-                
-                // 延迟刷新页面
-                setTimeout(function() {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                uploadMessage.textContent = '上传失败: ' + xhr.statusText;
-                uploadProgress.classList.add('bg-danger');
-                
-                changeAvatarBtn.disabled = false;
-                changeAvatarBtn.innerHTML = '<i class="fas fa-camera me-1"></i>重试上传';
-            }
-        });
-        
-        // 错误处理
-        xhr.addEventListener('error', function() {
-            uploadMessage.textContent = '网络错误，上传失败';
-            uploadProgress.classList.add('bg-danger');
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
             
-            changeAvatarBtn.disabled = false;
-            changeAvatarBtn.innerHTML = '<i class="fas fa-camera me-1"></i>重试上传';
-        });
-        
-        // 发送请求
-        xhr.open('POST', '{{ url_for("upload_profile_pic") }}');
-        xhr.send(formData);
+            // 验证文件格式
+            if (!file.type.match('image.*')) {
+                alert('请选择图片文件');
+                return;
+            }
+            
+            // 显示上传状态
+            uploadStatus.style.display = 'block';
+            uploadMessage.textContent = '正在上传...';
+            
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('avatar', file);
+            
+            // 添加CSRF令牌
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            formData.append('csrf_token', csrfToken);
+            
+            // 发送请求
+            fetch('/upload_avatar', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新头像预览
+                    avatarPreview.src = data.url;
+                    document.querySelector('.profile-pic-preview img').src = data.url;
+                    uploadMessage.textContent = '头像上传成功';
+                    uploadProgress.style.width = '100%';
+                    
+                    // 延迟隐藏状态提示
+                    setTimeout(() => {
+                        uploadStatus.style.display = 'none';
+                    }, 2000);
+                } else {
+                    uploadMessage.textContent = '上传失败: ' + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                uploadMessage.textContent = '上传出错，请重试';
+            });
+        }
     });
     
     // 为称号选择添加动画效果

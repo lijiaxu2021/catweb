@@ -1714,50 +1714,7 @@ class ProfileForm(FlaskForm):
     location = StringField('所在地', validators=[Optional(), Length(max=50)])
     submit = SubmitField('保存修改')
 
-@app.route('/edit-profile', methods=['GET', 'POST'])
-@login_required
-def edit_profile():
-    form = ProfileForm()
-    
-    if form.validate_on_submit():
-        if form.email.data:
-            # 检查邮箱是否已被其他用户使用
-            email_user = User.query.filter_by(email=form.email.data).first()
-            if email_user and email_user.id != current_user.id:
-                flash('该邮箱已被其他用户使用', 'danger')
-                return redirect(url_for('edit_profile'))
-            
-            current_user.email = form.email.data
-        
-        if form.bio.data:
-            current_user.bio = form.bio.data
-        
-        # 处理头像上传
-        if form.profile_pic.data:
-            file = form.profile_pic.data
-            if file and allowed_file(file.filename, {'png', 'jpg', 'jpeg', 'gif'}):
-                filename = secure_filename(file.filename)
-                filename = f"avatar_{current_user.id}_{int(time.time())}_{filename}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                
-                # 删除旧头像（如果不是默认头像）
-                if current_user.profile_pic != 'default_profile.jpg':
-                    old_avatar = os.path.join(app.config['UPLOAD_FOLDER'], current_user.profile_pic)
-                    if os.path.exists(old_avatar):
-                        os.remove(old_avatar)
-                
-                current_user.profile_pic = filename
-        
-        db.session.commit()
-        flash('个人资料已更新', 'success')
-        return redirect(url_for('user_profile', username=current_user.username))
-    
-    # 预填表单字段
-    if request.method == 'GET':
-        form.email.data = current_user.email
-        form.bio.data = current_user.bio
-    
-    return render_template('edit_profile.html', form=form)
+
 
 # 自定义过滤器：高亮搜索词
 @app.template_filter('highlight')
@@ -3791,48 +3748,224 @@ def inject_settings():
     
     return {'settings': settings}
 
-if __name__ == '__main__':
-    # 确保上传目录存在
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+# 确保编辑个人资料表单类有正确的文件字段
+class EditProfileForm(FlaskForm):
+    email = StringField('电子邮件', validators=[Optional(), Email()])
+    bio = TextAreaField('个人简介', validators=[Optional(), Length(max=200)])
+    profile_pic = FileField('头像', validators=[Optional()], 
+                         render_kw={"accept": "image/jpeg,image/png,image/gif"})
+    submit = SubmitField('保存更改')
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
     
-    # 创建必要的子目录
-    for folder in ['attachments', 'backgrounds']:
-        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            print(f"创建目录: {folder_path}")
-    
-    # 自动添加数据库列和表
-    with app.app_context():
-        # 添加 background_image 列到 post 表
+    if form.validate_on_submit():
         try:
-            db.session.execute('ALTER TABLE post ADD COLUMN background_image VARCHAR(255)')
+            # 处理头像上传 - 修正部分
+            if form.profile_pic.data and hasattr(form.profile_pic.data, 'filename') and form.profile_pic.data.filename:
+                # 确保文件名安全
+                filename = secure_filename(form.profile_pic.data.filename)
+                
+                # 添加时间戳避免文件名冲突
+                timestamp = int(time.time())
+                name, ext = os.path.splitext(filename)
+                new_filename = f"{current_user.username}_{timestamp}{ext}"
+                
+                # 确保上传目录存在
+                upload_dir = app.config['UPLOAD_FOLDER']
+                if not os.path.exists(upload_dir):
+                    os.makedirs(upload_dir)
+                
+                # 保存文件
+                filepath = os.path.join(upload_dir, new_filename)
+                form.profile_pic.data.save(filepath)
+                
+                # 处理图片调整大小
+                try:
+                    with Image.open(filepath) as img:
+                        img = img.resize((200, 200), Image.LANCZOS)
+                        img.save(filepath)
+                except Exception as e:
+                    print(f"无法处理图像: {str(e)}")
+                    # 继续执行，不中断流程
+                
+                # 更新用户头像
+                current_user.profile_pic = new_filename
+            
+            # 其他字段更新保持不变
+            if form.email.data is not None:
+                current_user.email = form.email.data
+            if form.bio.data is not None:
+                current_user.bio = form.bio.data
+                
+            # 提交更改
             db.session.commit()
-            print("成功添加 background_image 列到 post 表")
+            flash('个人资料已更新成功', 'success')
+            return redirect(url_for('user_profile', username=current_user.username))
+            
         except Exception as e:
             db.session.rollback()
-            print(f"background_image 列可能已存在: {e}")
+            print(f"更新个人资料时出错: {str(e)}")
+            print(traceback.format_exc())
+            flash(f'更新个人资料失败: {str(e)}', 'danger')
+    
+    # GET请求处理保持不变
+    elif request.method == 'GET':
+        form.email.data = current_user.email
+        form.bio.data = current_user.bio
+    
+    return render_template('edit_profile.html', form=form)
+
+# 在应用启动时确保上传目录存在并有正确权限
+
+
+@app.route('/upload_avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    print("开始处理头像上传请求")
+    try:
+        if 'avatar' not in request.files:
+            print("请求中没有avatar字段")
+            for key in request.files:
+                print(f"找到文件字段: {key}")
+            return jsonify({'error': '未找到文件，请确保表单字段名为avatar'}), 400
         
-        # 创建 post_attachment 表
+        file = request.files['avatar']
+        print(f"收到文件: {file.filename}, 类型: {file.content_type}, 大小: {file.content_length}")
+        
+        if file.filename == '':
+            print("文件名为空")
+            return jsonify({'error': '未选择文件'}), 400
+        
+        # 处理上传
+        filename = secure_filename(file.filename)
+        timestamp = int(time.time())
+        name, ext = os.path.splitext(filename)
+        new_filename = f"{current_user.username}_avatar_{timestamp}{ext}"
+        print(f"处理后的文件名: {new_filename}")
+        
+        # 确保上传目录存在
+        upload_dir = app.config['UPLOAD_FOLDER']
+        if not os.path.exists(upload_dir):
+            print(f"创建上传目录: {upload_dir}")
+            os.makedirs(upload_dir)
+        
+        filepath = os.path.join(upload_dir, new_filename)
+        print(f"保存文件到: {filepath}")
+        file.save(filepath)
+        print("文件保存成功")
+        
+        # 调整图像大小
         try:
-            db.session.execute('''
-            CREATE TABLE IF NOT EXISTS post_attachment (
-                id INTEGER PRIMARY KEY,
-                post_id INTEGER NOT NULL,
-                filename VARCHAR(255) NOT NULL,
-                original_filename VARCHAR(255) NOT NULL,
-                file_size INTEGER NOT NULL,
-                file_type VARCHAR(100) NOT NULL,
-                download_count INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE
-            )
-            ''')
-            db.session.commit()
-            print("成功创建 post_attachment 表")
+            with Image.open(filepath) as img:
+                print(f"调整图像大小，原始尺寸: {img.size}")
+                img = img.resize((200, 200), Image.LANCZOS)
+                img.save(filepath)
+                print("图像大小调整完成")
         except Exception as e:
-            db.session.rollback()
-            print(f"post_attachment 表可能已存在: {e}")
+            print(f"调整图像大小时出错: {str(e)}")
+            # 继续处理，不中断流程
+        
+        # 更新用户头像
+        # 先保存旧头像名称，以便删除
+        old_avatar = current_user.profile_pic
+        
+        # 更新数据库中的头像引用
+        current_user.profile_pic = new_filename
+        db.session.commit()
+        print(f"用户头像已更新为: {new_filename}")
+        
+        # 删除旧头像文件（如果不是默认头像）
+        if old_avatar and old_avatar != 'default_profile.jpg':
+            try:
+                old_path = os.path.join(upload_dir, old_avatar)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+                    print(f"已删除旧头像: {old_path}")
+            except Exception as e:
+                print(f"删除旧头像时出错: {str(e)}")
+        
+        # 构建URL时使用正确的路径
+        image_url = url_for('static', filename=f'uploads/{new_filename}')
+        print(f"返回图像URL: {image_url}")
+        
+        return jsonify({
+            'success': True,
+            'message': '头像已更新',
+            'filename': new_filename,
+            'url': image_url
+        })
+    except Exception as e:
+        print(f"上传头像时出错: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+# 删除不支持的装饰器
+# @app.before_first_request
+# def setup_upload_folder():
+
+# 替换为直接在应用启动时执行的函数
+def setup_upload_folder():
+    """确保上传目录存在并有正确权限"""
+    try:
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+            print(f"创建上传目录: {app.config['UPLOAD_FOLDER']}")
+        
+        # 测试目录是否可写
+        test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'test_write.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        print("上传目录权限正常")
+    except Exception as e:
+        print(f"设置上传目录时出错: {str(e)}")
+
+# 在app启动时检查上传目录权限
+def check_upload_permissions():
+    upload_dir = app.config['UPLOAD_FOLDER']
+    try:
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+            print(f"创建上传目录: {upload_dir}")
+        
+        # 尝试创建测试文件检查写入权限
+        test_file = os.path.join(upload_dir, 'test_write.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        print("上传目录权限正常")
+        return True
+    except Exception as e:
+        print(f"上传目录权限错误: {str(e)}")
+        print(f"请确保应用对目录 {upload_dir} 有写入权限")
+        return False
+
+# 在app.py底部调用
+if __name__ == '__main__':
+    # 详细检查上传目录权限
+    upload_dir = app.config['UPLOAD_FOLDER']
+    print(f"上传目录: {upload_dir}")
+    print(f"目录是否存在: {os.path.exists(upload_dir)}")
+    
+    if not os.path.exists(upload_dir):
+        print(f"创建上传目录: {upload_dir}")
+        os.makedirs(upload_dir)
+    
+    # 检查当前进程用户和权限
+    print(f"当前进程用户: {os.getlogin()}")
+    print(f"目录权限: {oct(os.stat(upload_dir).st_mode)}")
+    
+    try:
+        test_file = os.path.join(upload_dir, 'test_write.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        print(f"成功创建测试文件: {test_file}")
+        os.remove(test_file)
+        print("测试文件已删除")
+    except Exception as e:
+        print(f"写入测试文件时出错: {str(e)}")
     
     app.run(debug=True)
