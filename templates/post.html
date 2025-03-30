@@ -418,69 +418,37 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- 修改背景图片样式，应用于整个文章容器 -->
-            {% if post.background_image %}
+            <!-- 检查文章背景图是否存在 -->
+            {% if post.background_image and post.background_image != '' %}
             <style>
-                .article-container {
-                    position: relative;
-                    padding: 2rem;
-                    border-radius: 8px;
-                    margin-bottom: 2rem;
-                    color: #fff; /* 白色文字 */
-                }
-                
                 .article-container::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
                     background-image: url("{{ url_for('static', filename='uploads/backgrounds/' + post.background_image) }}");
-                    background-size: cover;
-                    background-position: center;
-                    opacity: 0.6; /* 提高不透明度从0.25到0.6 */
-                    border-radius: 8px;
-                    z-index: -1;
-                }
-                
-                .article-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: rgba(0, 0, 0, 0.5); /* 减小黑色覆盖层不透明度从0.7到0.5 */
-                    border-radius: 8px;
-                    z-index: -1;
-                }
-                
-                /* 确保文章内容中的文字清晰可见 */
-                .post-content {
-                    color: #fff;
-                }
-                
-                .post-content h1, .post-content h2, .post-content h3, 
-                .post-content h4, .post-content h5, .post-content h6 {
-                    color: #fff;
-                }
-                
-                /* 链接颜色调整 */
-                .article-container a {
-                    color: #8be9fd;
-                }
-                
-                .article-container a:hover {
-                    color: #50fa7b;
-                }
-                
-                /* 代码块背景调整 */
-                .post-content pre, .post-content code {
-                    background-color: rgba(40, 42, 54, 0.8);
-                    border: 1px solid #44475a;
                 }
             </style>
+            {% endif %}
 
+            <!-- 检查作者信息和称号 -->
+            <div class="author-info">
+                <a href="{{ url_for('profile', username=post.author.username) }}" class="d-flex align-items-center">
+                    <img src="{{ url_for('static', filename='uploads/' + (post.author.profile_pic or 'default_avatar.jpg')) }}" 
+                         class="rounded-circle me-2" width="40" height="40" alt="{{ post.author.username }}">
+                    <div>
+                        <div class="d-flex align-items-center flex-wrap">
+                            <span class="author-name">{{ post.author.username }}</span>
+                            <!-- 显示所有佩戴称号 -->
+                            {% for title in post.author.get_wearing_titles() %}
+                                <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                    {{ title.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- 修改背景图片样式，应用于整个文章容器 -->
+            {% if post.background_image %}
             <div class="article-container">
                 <div class="article-overlay"></div>
                 
@@ -489,16 +457,17 @@
                     <h1 class="display-4 fw-bold">{{ post.title }}</h1>
                     <div class="d-flex justify-content-center align-items-center mb-3">
                         <div class="author-info">
-                            <a href="{{ url_for('profile_view', username=post.author.username) }}" class="d-flex align-items-center">
+                            <a href="{{ url_for('profile', username=post.author.username) }}" class="d-flex align-items-center">
                                 <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="rounded-circle me-2" width="40" height="40" alt="{{ post.author.username }}">
                                 <div>
-                                    <div class="d-flex align-items-center">
-                                        <span class="fw-bold">{{ post.author.username }}</span>
-                                        {% if post.author.wearing_title %}
-                                        <span class="badge ms-2" style="background-color: {{ post.author.wearing_title.color }};">
-                                            {{ post.author.wearing_title.name }}
-                                        </span>
-                                        {% endif %}
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="author-name">{{ post.author.username }}</span>
+                                        <!-- 显示所有佩戴称号 -->
+                                        {% for title in post.author.get_wearing_titles() %}
+                                            <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                {{ title.name }}
+                                            </span>
+                                        {% endfor %}
                                     </div>
                                     <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                                 </div>
@@ -559,19 +528,20 @@
                     <h1 class="display-4 fw-bold">{{ post.title }}</h1>
                     <div class="d-flex justify-content-center align-items-center mb-3">
                         <div class="author-info">
-                            <a href="{{ url_for('profile_view', username=post.author.username) }}" class="d-flex align-items-center">
+                            <a href="{{ url_for('profile', username=post.author.username) }}" class="d-flex align-items-center">
                                 <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" class="rounded-circle me-2" width="40" height="40" alt="{{ post.author.username }}">
                                 <div>
-                                    <div class="d-flex align-items-center">
-                                        <span class="fw-bold">{{ post.author.username }}</span>
-                                        {% if post.author.wearing_title %}
-                                        <span class="badge ms-2" style="background-color: {{ post.author.wearing_title.color }};">
-                                            {{ post.author.wearing_title.name }}
-                                        </span>
-                                        {% endif %}
-                                    </div>
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="author-name">{{ post.author.username }}</span>
+                                        <!-- 显示所有佩戴称号 -->
+                                        {% for title in post.author.get_wearing_titles() %}
+                                            <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                {{ title.name }}
+                                            </span>
+                                        {% endfor %}
+                            </div>
                                     <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
-                                </div>
+                            </div>
                             </a>
                         </div>
                         <span class="mx-2">•</span>
@@ -595,9 +565,9 @@
                 {% endif %}
                 
                 <div class="post-content">
-                    {{ post.content|safe }}
-                </div>
-                
+                        {{ post.content|safe }}
+                    </div>
+                    
                 <!-- 原有的文章页脚、附件等... -->
             </div>
             {% endif %}
@@ -639,7 +609,7 @@
                                         </a>
                                     </td>
                                 </tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -647,8 +617,94 @@
             </div>
             {% endif %}
             
-            <!-- 评论区等其他内容 -->
-            <!-- ... -->
+            <!-- 评论区域 -->
+            <div class="card shadow-sm rounded-4 mt-5 comment-section">
+                <div class="card-header bg-transparent">
+                    <h4 class="mb-0"><i class="far fa-comments me-2"></i>评论 ({{ post.comments|length }})</h4>
+                </div>
+                <div class="card-body">
+                    <!-- 评论表单 -->
+                    {% if current_user.is_authenticated %}
+                    <div class="comment-form mb-4" id="comment-form">
+                        <form action="{{ url_for('add_comment', slug=post.slug) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="parent_id" id="comment-parent-id" value="">
+                            
+                            <!-- 回复指示器 -->
+                            <div id="reply-indicator" class="mb-3 d-none">
+                                <div class="alert alert-light d-flex align-items-center">
+                                    <i class="fas fa-reply me-2"></i>
+                                    <span id="reply-to-text">回复:</span>
+                                    <button type="button" class="btn-close ms-auto" id="cancel-reply"></button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <textarea name="content" class="form-control" rows="3" placeholder="添加评论..." required></textarea>
+                        </div>
+                        
+                            <div class="d-flex justify-content-end mt-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i>发表评论
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>请 <a href="{{ url_for('login') }}">登录</a> 后参与评论
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 评论列表 -->
+                    <div class="comments-list">
+                        {% if post.comments %}
+                            {% for comment in post.comments %}
+                            <div class="comment-item mb-4" id="comment-{{ comment.id }}">
+                                <div class="d-flex">
+                                    <a href="{{ url_for('profile', username=comment.author.username) }}" class="me-2">
+                                        <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_pic) }}" 
+                                             alt="{{ comment.author.username }}" class="rounded-circle" width="45" height="45">
+                                    </a>
+                                    <div class="comment-content">
+                                        <div class="d-flex align-items-center">
+                                            <h6 class="mb-0 me-2">{{ comment.author.username }}</h6>
+                                            <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                        <p class="mt-2 mb-1">{{ comment.content }}</p>
+                                        
+                                        <!-- 简化评论操作按钮 -->
+                                        <div class="comment-actions">
+                                            {% if current_user.is_authenticated %}
+                                            <button type="button" class="btn btn-sm text-primary reply-btn" 
+                                                    data-comment-id="{{ comment.id }}" 
+                                                    data-author="{{ comment.author.username }}">
+                                                <i class="fas fa-reply me-1"></i>回复
+                                            </button>
+                                            {% endif %}
+                                            
+                                            {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
+                                            <form method="post" action="{{ url_for('delete_comment', comment_id=comment.id, post_id=post.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm text-danger" onclick="return confirm('确定要删除这条评论吗？')">
+                                                    <i class="fas fa-trash-alt me-1"></i>删除
+                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4 text-muted">
+                                <i class="far fa-comment-dots fa-2x mb-2"></i>
+                                <p class="mb-0">暂无评论</p>
+                            </div>
+                        {% endif %}
+                        </div>
+                </div>
+            </div>
         </div>
         
         <!-- 侧边栏 -->
@@ -737,7 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-flex justify-content-center align-items-center py-3">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">加载中...</span>
-                    </div>
+            </div>
                     <span class="ms-2">加载用户信息...</span>
                 </div>
             `;
@@ -756,8 +812,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div>
                                     <h5 class="mb-0">${data.user.username}</h5>
                                     <p class="text-muted small mb-0">注册于 ${data.user.joined_date}</p>
-                                </div>
-                            </div>
+            </div>
+        </div>
                             <p class="mb-2 small">${data.user.bio || '这个用户很懒，还没有填写简介'}</p>
                             <div class="user-stats">
                                 <div class="user-stat-item">
@@ -771,8 +827,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="user-stat-item">
                                     <div class="user-stat-value">${data.user.likes_received}</div>
                                     <div class="user-stat-label">获赞</div>
-                                </div>
-                            </div>
+    </div>
+</div>
                         `;
                     } else {
                         card.innerHTML = '<div class="p-3 text-danger">获取用户信息失败</div>';
@@ -823,6 +879,133 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 </script>
+
+<!-- 评论功能的JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 图片上传预览
+    const commentImage = document.getElementById('comment-image');
+    const imagePreview = document.getElementById('image-preview');
+    const previewImg = imagePreview.querySelector('img');
+    const removeImage = document.getElementById('remove-image');
+    
+    if (commentImage) {
+        commentImage.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    imagePreview.classList.remove('d-none');
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+    
+    if (removeImage) {
+        removeImage.addEventListener('click', function() {
+            commentImage.value = '';
+            imagePreview.classList.add('d-none');
+        });
+    }
+    
+    // 回复功能
+    const replyBtns = document.querySelectorAll('.reply-btn');
+    const parentIdInput = document.getElementById('comment-parent-id');
+    const replyIndicator = document.getElementById('reply-indicator');
+    const replyToText = document.getElementById('reply-to-text');
+    const cancelReply = document.getElementById('cancel-reply');
+    const commentForm = document.getElementById('comment-form');
+    
+    function scrollToElement(element) {
+        window.scrollTo({
+            top: element.offsetTop - 100,
+            behavior: 'smooth'
+        });
+    }
+    
+    replyBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.getAttribute('data-comment-id');
+            const authorName = this.getAttribute('data-author');
+            
+            parentIdInput.value = commentId;
+            replyToText.textContent = `回复: ${authorName}`;
+            replyIndicator.classList.remove('d-none');
+            
+            // 滚动到评论表单
+            scrollToElement(commentForm);
+            
+            // 聚焦评论文本框
+            document.getElementById('comment-content').focus();
+        });
+    });
+    
+    if (cancelReply) {
+        cancelReply.addEventListener('click', function() {
+            parentIdInput.value = '';
+            replyIndicator.classList.add('d-none');
+        });
+    }
+    
+    // 高亮当前评论（如果URL包含锚点）
+    const highlightComment = () => {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#comment-')) {
+            const commentElement = document.querySelector(hash);
+            if (commentElement) {
+                commentElement.classList.add('highlight-comment');
+                setTimeout(() => {
+                    commentElement.classList.remove('highlight-comment');
+                }, 3000);
+            }
+        }
+    };
+    
+    // 页面加载和哈希变化时执行高亮
+    highlightComment();
+    window.addEventListener('hashchange', highlightComment);
+});
+</script>
+
+<style>
+/* 评论样式 */
+.comment-section {
+    border: none;
+}
+
+.comment-item, .reply-item {
+    transition: background-color 0.3s;
+}
+
+.highlight-comment {
+    background-color: rgba(255, 243, 205, 0.5);
+    animation: highlight-fade 3s;
+}
+
+@keyframes highlight-fade {
+    0% { background-color: rgba(255, 243, 205, 0.8); }
+    100% { background-color: rgba(255, 243, 205, 0); }
+}
+
+.comment-actions button, .reply-actions button {
+    padding: 0.25rem 0.5rem;
+    color: #6c757d;
+}
+
+.nested-replies {
+    position: relative;
+}
+
+.nested-replies::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    border-left: 3px solid #f0f0f0;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -853,3 +1036,37 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 </script>
 {% endblock %} 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 处理回复按钮点击
+    const replyButtons = document.querySelectorAll('.reply-btn');
+    const replyIndicator = document.getElementById('reply-indicator');
+    const replyToText = document.getElementById('reply-to-text');
+    const parentIdField = document.getElementById('comment-parent-id');
+    const cancelReplyButton = document.getElementById('cancel-reply');
+    
+    replyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.getAttribute('data-comment-id');
+            const authorName = this.getAttribute('data-author');
+            
+            // 设置回复信息
+            parentIdField.value = commentId;
+            replyToText.textContent = `回复: ${authorName}`;
+            replyIndicator.classList.remove('d-none');
+            
+            // 滚动到评论表单
+            document.getElementById('comment-form').scrollIntoView({behavior: 'smooth'});
+        });
+    });
+    
+    // 处理取消回复
+    if (cancelReplyButton) {
+        cancelReplyButton.addEventListener('click', function() {
+            parentIdField.value = '';
+            replyIndicator.classList.add('d-none');
+        });
+    }
+});
+</script> 

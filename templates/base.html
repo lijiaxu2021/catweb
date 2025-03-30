@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/css/lightbox.min.css">
     <!-- 预加载关键 CSS (可选，如果 style.css 很大) -->
     <!-- <link rel="preload" href="{{ url_for('static', filename='css/style.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'"> -->
     <!-- <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></noscript> -->
@@ -206,11 +207,14 @@
                                 <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
                                      class="rounded-circle me-1" width="30" height="30" alt="{{ current_user.username }}">
                                 {{ current_user.username }}
-                                {% if current_user.wearing_title %}
-                                    <span class="badge ms-1" style="background-color: {{ current_user.wearing_title.color }}">
-                                        {{ current_user.wearing_title.name }}
+                                
+                                <!-- 显示所有佩戴的称号 -->
+                                {% for title in current_user.get_wearing_titles() %}
+                                    <span class="badge ms-1" style="background-color: {{ title.color }}">
+                                        {{ title.name }}
                                     </span>
-                                {% endif %}
+                                {% endfor %}
+                                
                                 {% if current_user.is_authenticated and g.get('unread_notifications_count', 0) > 0 %}
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                                     {{ g.get('unread_notifications_count', 0) }}
@@ -670,6 +674,17 @@
               completeLoading();
           }
       }, 4000);
+    </script>
+
+    <!-- 在body结束标签前添加Lightbox JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/js/lightbox.min.js"></script>
+    <script>
+        // 配置Lightbox
+        lightbox.option({
+            'resizeDuration': 200,
+            'wrapAround': true,
+            'albumLabel': "图片 %1 / %2"
+        });
     </script>
 </body>
 </html> 

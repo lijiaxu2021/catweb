@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}我的称号 - {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card rounded-4 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">我的称号</h3>
+                    
+                    {% if current_user.titles.all() %}
+                        <div class="title-list">
+                            {% for title in current_user.titles %}
+                            <div class="title-item d-flex justify-content-between align-items-center p-3 mb-3 border rounded">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge me-3" style="background-color: {{ title.color }}; font-size: 1rem;">
+                                        {{ title.name }}
+                                    </span>
+                                    {% if title.id == current_user.wearing_title_id %}
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> 当前佩戴</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div>
+                                    {% if title.id == current_user.wearing_title_id %}
+                                        <form method="post" action="{{ url_for('remove_wearing_title') }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-times"></i> 取消佩戴
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{{ url_for('wear_title', title_id=title.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-crown"></i> 佩戴此称号
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-award fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">您还没有任何称号</h5>
+                            <p>继续参与网站活动以获取称号！</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

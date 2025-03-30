@@ -121,17 +121,28 @@
             <div class="my-titles mb-3">
                 {% if current_user.titles %}
                     <p>选择要佩戴的称号（可多选）：</p>
-                    <div class="form-check">
+                    <div class="title-selection">
                         {% for title in current_user.titles %}
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="wearing_titles" 
                                    value="{{ title.id }}" id="title-{{ title.id }}"
                                    {% if title in current_user.get_wearing_titles() %}checked{% endif %}>
-                            <label class="form-check-label" for="title-{{ title.id }}">
-                                <span class="badge" style="background-color: {{ title.color }}">{{ title.name }}</span>
+                            <label class="form-check-label d-flex align-items-center" for="title-{{ title.id }}">
+                                <span class="badge me-2" style="background-color: {{ title.color }}">{{ title.name }}</span>
+                                {% if title.id == current_user.wearing_title_id %}
+                                <small class="text-success"><i class="fas fa-check-circle"></i> 当前主称号</small>
+                                {% endif %}
                             </label>
                         </div>
                         {% endfor %}
+                    </div>
+                    
+                    <!-- 称号预览区域 -->
+                    <div class="title-preview-container mt-4 mb-3">
+                        <label class="form-label">称号预览效果</label>
+                        <div id="titlePreviewArea" class="d-flex flex-wrap gap-2 p-3 border rounded">
+                            <span class="text-muted">未选择称号</span>
+                        </div>
                     </div>
                 {% else %}
                     <p class="text-muted">您还没有获得任何称号。</p>
@@ -253,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             selected.forEach(title => {
                 const badge = document.createElement('span');
-                badge.className = 'badge';
+                badge.className = 'badge me-1';
                 badge.style.backgroundColor = title.color;
                 badge.textContent = title.text;
                 previewArea.appendChild(badge);
@@ -265,4 +276,16 @@ document.addEventListener('DOMContentLoaded', function() {
     updatePreview();
 });
 </script>
+
+<!-- 在称号管理表单后添加调试信息 -->
+<div class="mt-3 small text-muted">
+    <p>调试信息:</p>
+    <p>佩戴称号数量: {{ current_user.get_wearing_titles()|length }}</p>
+    <p>佩戴称号ID: 
+        {% for title in current_user.get_wearing_titles() %}
+            {{ title.id }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    <p>主称号ID: {{ current_user.wearing_title_id }}</p>
+</div>
 {% endblock %} 
