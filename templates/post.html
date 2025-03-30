@@ -592,6 +592,45 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 直接在文章后面添加评论表单 -->
+                <div class="comment-form-container mt-4 mb-4">
+                    <h3 class="mb-3">发表评论</h3>
+                    
+                    {% if current_user.is_authenticated %}
+                    <div class="comment-form" id="comment-form">
+                        <form action="{{ url_for('add_comment', slug=post.slug) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="parent_id" id="comment-parent-id" value="">
+                            
+                            <!-- 回复指示器 -->
+                            <div id="reply-indicator" class="alert alert-info d-none mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="reply-to-text">正在回复: 用户名</span>
+                                    <button type="button" id="cancel-reply" class="btn-close"></button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <textarea name="content" id="comment-content" class="form-control" rows="4" placeholder="写下你的评论..." required></textarea>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">支持基本Markdown语法</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i>发表评论
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        请<a href="{{ url_for('login', next=request.path) }}">登录</a>后发表评论
+                    </div>
+                    {% endif %}
+                </div>
             </div>
             {% else %}
             <!-- 无背景图片时的原有布局 -->
@@ -648,60 +687,8 @@
             </div>
             {% endif %}
             
-            <!-- 改进附件区域 -->
-            {% if post.attachments %}
-            <div class="card mt-4 attachment-card fade-in" style="animation-delay: 0.5s;">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <i class="fas fa-paperclip me-2"></i>文章附件 ({{ post.attachments|length }})
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>文件名</th>
-                                    <th>大小</th>
-                                    <th>上传时间</th>
-                                    <th>下载次数</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for attachment in post.attachments %}
-                                <tr style="animation: rowFadeIn 0.4s ease forwards; animation-delay: {{ 0.6 + loop.index0 * 0.1 }}s; opacity: 0;">
-                                    <td>
-                                        <i class="fas fa-file me-2 text-primary"></i>
-                                        {{ attachment.original_filename }}
-                                    </td>
-                                    <td>{{ (attachment.file_size / 1024)|int }}KB</td>
-                                    <td>{{ attachment.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                                    <td>{{ attachment.download_count }}</td>
-                                    <td>
-                                        <a href="{{ url_for('download_attachment', attachment_id=attachment.id) }}" 
-                                           class="btn btn-sm btn-outline-primary download-btn">
-                                            <i class="fas fa-download me-1"></i>下载
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            
-            <!-- 修改评论部分的结构 -->
-            {% if post.background_image %}
-            <!-- 在文章内容后添加评论区和评论表单 -->
-            <div class="post-footer my-4 pt-3 border-top">
-                <!-- 现有内容保持不变 -->
-            </div>
-
-            <!-- 评论区完整结构 -->
-            <div class="comments-section mt-5">
+            <!-- 评论列表区域 -->
+            <div class="comments-section mt-4">
                 <h3 class="comments-title mb-4">
                     <i class="fas fa-comments me-2"></i>评论 ({{ comments|length }})
                 </h3>
@@ -820,47 +807,7 @@
                     <p class="text-muted">暂无评论，快来发表第一条评论吧！</p>
                 </div>
                 {% endif %}
-
-                <!-- 评论表单直接放在评论列表下方 -->
-                <div class="comment-form-container">
-                    <h3 class="mb-4">发表评论</h3>
-                    
-                    {% if current_user.is_authenticated %}
-                    <div class="comment-form mb-4" id="comment-form">
-                        <form action="{{ url_for('add_comment', slug=post.slug) }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="parent_id" id="comment-parent-id" value="">
-                            
-                            <!-- 回复指示器 -->
-                            <div id="reply-indicator" class="alert alert-info d-none mb-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span id="reply-to-text">正在回复: 用户名</span>
-                                    <button type="button" id="cancel-reply" class="btn-close"></button>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <textarea name="content" id="comment-content" class="form-control" rows="4" placeholder="写下你的评论..." required></textarea>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <small class="text-muted">支持基本Markdown语法</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-paper-plane me-1"></i>发表评论
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        请<a href="{{ url_for('login', next=request.path) }}">登录</a>后发表评论
-                    </div>
-                    {% endif %}
-                </div>
             </div>
-            {% endif %}
         </div>
         
         <!-- 侧边栏 -->
