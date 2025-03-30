@@ -65,6 +65,23 @@
         body.is-loading .collapse:not(.show) {
             display: none !important;
         }
+
+        .global-reading-progress {
+            position: fixed;
+            top: 0; /* 修改为0，放在页面最顶部 */
+            left: 0;
+            height: 4px;
+            background-color: #4361ee; /* 蓝色 */
+            z-index: 1031; /* 增加z-index确保它显示在导航栏之上 */
+            width: 0;
+            transition: width 0.2s ease;
+            box-shadow: 0 2px 4px rgba(67, 97, 238, 0.3);
+        }
+
+        /* 删除背景底色 */
+        .global-reading-progress::before {
+            display: none; /* 或完全移除这段代码 */
+        }
     </style>
     {% block extra_css %}{% endblock %}
     {% if settings and settings.background_image %}
@@ -91,9 +108,7 @@
     </div>
 
     <!-- 全站阅读进度条 -->
-    <div class="reading-progress-container">
-        <div class="reading-progress-bar"></div>
-    </div>
+    <div class="global-reading-progress" id="globalReadingProgress"></div>
     
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -638,6 +653,37 @@
     {% macro csrf() %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% endmacro %}
+
+    <!-- 在其他脚本之前添加 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取进度条元素
+        const progressBar = document.getElementById('globalReadingProgress');
+        
+        // 更新进度条的函数
+        function updateProgress() {
+            // 获取页面高度
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            
+            // 计算滚动进度百分比
+            const scrollPercent = (scrollTop / (documentHeight - windowHeight)) * 100;
+            
+            // 更新进度条宽度
+            progressBar.style.width = scrollPercent + '%';
+        }
+        
+        // 监听滚动事件
+        window.addEventListener('scroll', updateProgress);
+        
+        // 初始化进度条
+        updateProgress();
+        
+        // 在页面大小变化时重新计算
+        window.addEventListener('resize', updateProgress);
+    });
+    </script>
 
     <!-- 在其他脚本之后添加 -->
     <script src="{{ url_for('static', filename='js/carousel-enhancer.js') }}"></script>

@@ -408,6 +408,74 @@
         background-color: rgba(40, 42, 54, 0.8);
         border: 1px solid #44475a;
     }
+    
+    /* 根据背景类型调整文字颜色的样式 */
+    .light-bg .post-header h1,
+    .light-bg .post-header .text-muted,
+    .light-bg .post-meta,
+    .light-bg .post-header .text-light-50 {
+        color: #212529 !important; /* 深色文字 */
+    }
+    
+    .dark-bg .post-header h1,
+    .dark-bg .post-header .text-muted,
+    .dark-bg .post-meta,
+    .dark-bg .post-header .text-light-50 {
+        color: #fff !important; /* 浅色文字 */
+    }
+    
+    /* 保留文章正文的原始样式 */
+    .post-content {
+        color: inherit; /* 保持文章内容不变 */
+    }
+    
+    /* 文章内容默认颜色 */
+    .dark-bg .post-content {
+        color: #fff;
+    }
+    
+    .light-bg .post-content {
+        color: #212529;
+    }
+    
+    /* 添加自定义CSS类 */
+    .article-container-wide {
+        max-width: 1200px; /* 或您想要的最大宽度 */
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .article-container-wide {
+            padding: 0 10px;
+        }
+    }
+    
+    /* 修改 CSS 样式部分 */
+    @media (min-width: 992px) {
+        .container-fluid .row .col-xl-10 {
+            flex: 0 0 auto;
+            width: 75% !important; /* 修改为75%，给侧边栏留出更多空间 */
+        }
+        
+        /* 调整侧边栏宽度为25% */
+        .col-lg-2 {
+            flex: 0 0 auto;
+            width: 25% !important;
+            padding-left: 20px; /* 增加左侧填充 */
+        }
+        
+        /* 确保侧边栏内容不会被挤压 */
+        .sidebar-widget {
+            min-width: 200px;
+        }
+    }
+    
+    /* 确保文章内容显示正常 */
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+    }
 </style>
 {% endblock %}
 
@@ -415,9 +483,9 @@
 <!-- 阅读进度条 -->
 <div class="reading-bar"></div>
 
-<div class="container py-5">
+<div class="container-fluid py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-xl-10 col-xxl-8">
             <!-- 检查文章背景图是否存在 -->
             {% if post.background_image and post.background_image != '' %}
             <style>
@@ -625,13 +693,138 @@
             </div>
             {% endif %}
             
-            <!-- 评论区域 -->
-            <div class="card shadow-sm rounded-4 mt-5 comment-section">
-                <div class="card-header bg-transparent">
-                    <h4 class="mb-0"><i class="far fa-comments me-2"></i>评论 ({{ post.comments|length }})</h4>
+            <!-- 修改评论部分的结构 -->
+            {% if post.background_image %}
+            <!-- 在文章内容后添加评论区和评论表单 -->
+            <div class="post-footer my-4 pt-3 border-top">
+                <!-- 现有内容保持不变 -->
+            </div>
+
+            <!-- 评论区完整结构 -->
+            <div class="comments-section mt-5">
+                <h3 class="comments-title mb-4">
+                    <i class="fas fa-comments me-2"></i>评论 ({{ comments|length }})
+                </h3>
+                
+                {% if comments %}
+                <div class="comments-list mb-5">
+                    {% for comment in comments %}
+                        {% if comment.parent_id is none %}  <!-- 只显示顶级评论 -->
+                        <div class="comment-item card mb-3" id="comment-{{ comment.id }}">
+                            <div class="card-body">
+                                <div class="d-flex">
+                                    <img src="{{ url_for('static', filename='uploads/' + (comment.author.profile_pic or 'default_avatar.jpg')) }}" 
+                                         class="rounded-circle me-3" width="50" height="50" alt="{{ comment.author.username }}">
+                                    <div class="w-100">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <a href="{{ url_for('profile', username=comment.author.username) }}" class="fw-bold text-decoration-none">
+                                                    {{ comment.author.username }}
+                                                </a>
+                                                <!-- 显示用户称号 -->
+                                                {% if comment.author.get_wearing_titles() %}
+                                                    {% for title in comment.author.get_wearing_titles() %}
+                                                        <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                            {{ title.name }}
+                                                        </span>
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                        <div class="comment-content mb-3">
+                                            {{ comment.content|safe }}
+                                        </div>
+                                        <div class="comment-actions">
+                                            {% if current_user.is_authenticated %}
+                                            <button class="btn btn-sm btn-outline-secondary reply-btn" 
+                                                    data-comment-id="{{ comment.id }}" 
+                                                    data-author="{{ comment.author.username }}">
+                                                <i class="fas fa-reply me-1"></i>回复
+                                            </button>
+                                            {% endif %}
+                                            
+                                            {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
+                                            <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="post" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要删除此评论吗？')">
+                                                    <i class="fas fa-trash-alt me-1"></i>删除
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- 嵌套回复 -->
+                                        {% if comment.replies %}
+                                        <div class="nested-replies mt-3 ps-4">
+                                            {% for reply in comment.replies %}
+                                            <div class="reply-item card mb-2" id="comment-{{ reply.id }}">
+                                                <div class="card-body py-3">
+                                                    <div class="d-flex">
+                                                        <img src="{{ url_for('static', filename='uploads/' + (reply.author.profile_pic or 'default_avatar.jpg')) }}" 
+                                                             class="rounded-circle me-2" width="40" height="40" alt="{{ reply.author.username }}">
+                                                        <div class="w-100">
+                                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                <div>
+                                                                    <a href="{{ url_for('profile', username=reply.author.username) }}" class="fw-bold text-decoration-none">
+                                                                        {{ reply.author.username }}
+                                                                    </a>
+                                                                    <!-- 显示用户称号 -->
+                                                                    {% if reply.author.get_wearing_titles() %}
+                                                                        {% for title in reply.author.get_wearing_titles() %}
+                                                                            <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                                                {{ title.name }}
+                                                                            </span>
+                                                                        {% endfor %}
+                                                                    {% endif %}
+                                                                </div>
+                                                                <small class="text-muted">{{ reply.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                                            </div>
+                                                            <div class="reply-content mb-2">
+                                                                {{ reply.content|safe }}
+                                                            </div>
+                                                            <div class="reply-actions">
+                                                                {% if current_user.is_authenticated %}
+                                                                <button class="btn btn-sm btn-outline-secondary reply-btn" 
+                                                                        data-comment-id="{{ comment.id }}" 
+                                                                        data-author="{{ reply.author.username }}">
+                                                                    <i class="fas fa-reply me-1"></i>回复
+                                                                </button>
+                                                                {% endif %}
+                                                                
+                                                                {% if current_user.is_authenticated and (current_user.id == reply.user_id or current_user.is_admin) %}
+                                                                <form action="{{ url_for('delete_comment', comment_id=reply.id) }}" method="post" class="d-inline">
+                                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要删除此回复吗？')">
+                                                                        <i class="fas fa-trash-alt me-1"></i>删除
+                                                                    </button>
+                                                                </form>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
-                <div class="card-body">
-                    <!-- 评论表单 -->
+                {% else %}
+                <div class="no-comments text-center py-4 mb-5">
+                    <p class="text-muted">暂无评论，快来发表第一条评论吧！</p>
+                </div>
+                {% endif %}
+
+                <!-- 评论表单直接放在评论列表下方 -->
+                <div class="comment-form-container">
+                    <h3 class="mb-4">发表评论</h3>
+                    
                     {% if current_user.is_authenticated %}
                     <div class="comment-form mb-4" id="comment-form">
                         <form action="{{ url_for('add_comment', slug=post.slug) }}" method="post">
@@ -639,19 +832,21 @@
                             <input type="hidden" name="parent_id" id="comment-parent-id" value="">
                             
                             <!-- 回复指示器 -->
-                            <div id="reply-indicator" class="mb-3 d-none">
-                                <div class="alert alert-light d-flex align-items-center">
-                                    <i class="fas fa-reply me-2"></i>
-                                    <span id="reply-to-text">回复:</span>
-                                    <button type="button" class="btn-close ms-auto" id="cancel-reply"></button>
+                            <div id="reply-indicator" class="alert alert-info d-none mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="reply-to-text">正在回复: 用户名</span>
+                                    <button type="button" id="cancel-reply" class="btn-close"></button>
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <textarea name="content" class="form-control" rows="3" placeholder="添加评论..." required></textarea>
-                        </div>
-                        
-                            <div class="d-flex justify-content-end mt-2">
+                            <div class="mb-3">
+                                <textarea name="content" id="comment-content" class="form-control" rows="4" placeholder="写下你的评论..." required></textarea>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">支持基本Markdown语法</small>
+                                </div>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-paper-plane me-1"></i>发表评论
                                 </button>
@@ -660,63 +855,16 @@
                     </div>
                     {% else %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>请 <a href="{{ url_for('login') }}">登录</a> 后参与评论
+                        请<a href="{{ url_for('login', next=request.path) }}">登录</a>后发表评论
                     </div>
                     {% endif %}
-                    
-                    <!-- 评论列表 -->
-                    <div class="comments-list">
-                        {% if post.comments %}
-                            {% for comment in post.comments %}
-                            <div class="comment-item mb-4" id="comment-{{ comment.id }}">
-                                <div class="d-flex">
-                                    <a href="{{ url_for('profile', username=comment.author.username) }}" class="me-2">
-                                        <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_pic) }}" 
-                                             alt="{{ comment.author.username }}" class="rounded-circle" width="45" height="45">
-                                    </a>
-                                    <div class="comment-content">
-                                        <div class="d-flex align-items-center">
-                                            <h6 class="mb-0 me-2">{{ comment.author.username }}</h6>
-                                            <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                        </div>
-                                        <p class="mt-2 mb-1">{{ comment.content }}</p>
-                                        
-                                        <!-- 简化评论操作按钮 -->
-                                        <div class="comment-actions">
-                                            {% if current_user.is_authenticated %}
-                                            <button type="button" class="btn btn-sm text-primary reply-btn" 
-                                                    data-comment-id="{{ comment.id }}" 
-                                                    data-author="{{ comment.author.username }}">
-                                                <i class="fas fa-reply me-1"></i>回复
-                                            </button>
-                                            {% endif %}
-                                            
-                                            {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
-                                            <form method="post" action="{{ url_for('delete_comment', comment_id=comment.id, post_id=post.id) }}" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm text-danger" onclick="return confirm('确定要删除这条评论吗？')">
-                                                    <i class="fas fa-trash-alt me-1"></i>删除
-                                </button>
-                                            </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-4 text-muted">
-                                <i class="far fa-comment-dots fa-2x mb-2"></i>
-                                <p class="mb-0">暂无评论</p>
-                            </div>
-                        {% endif %}
-                        </div>
                 </div>
             </div>
+            {% endif %}
         </div>
         
         <!-- 侧边栏 -->
-        <div class="col-lg-4">
+        <div class="col-lg-2">
             {% include 'sidebar.html' %}
         </div>
     </div>
@@ -1014,6 +1162,57 @@ document.addEventListener('DOMContentLoaded', function() {
     border-left: 3px solid #f0f0f0;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 检测背景颜色并设置适当的文字颜色
+    function detectBackgroundBrightness() {
+        const articleContainer = document.querySelector('.article-container');
+        if (!articleContainer) return;
+        
+        // 尝试获取背景图片
+        const bgImage = getComputedStyle(articleContainer).backgroundImage;
+        const hasBgImage = bgImage && bgImage !== 'none';
+        
+        if (hasBgImage || {{ 'true' if post.background_image else 'false' }}) {
+            // 如果有背景图片，默认使用深色背景处理（白色文字）
+            articleContainer.classList.add('dark-bg');
+            articleContainer.classList.remove('light-bg');
+        } else {
+            // 获取背景颜色并检测亮度
+            const bgColor = getComputedStyle(articleContainer).backgroundColor;
+            const brightness = getBrightness(bgColor);
+            
+            if (brightness > 150) { // 亮度阈值，可以调整
+                articleContainer.classList.add('light-bg');
+                articleContainer.classList.remove('dark-bg');
+            } else {
+                articleContainer.classList.add('dark-bg');
+                articleContainer.classList.remove('light-bg');
+            }
+        }
+    }
+    
+    // 辅助函数：计算RGB颜色的亮度
+    function getBrightness(color) {
+        // 提取RGB值
+        const rgb = color.match(/\d+/g);
+        if (!rgb || rgb.length < 3) return 0;
+        
+        // 计算亮度 (0.299*R + 0.587*G + 0.114*B)
+        return (0.299 * parseInt(rgb[0]) + 0.587 * parseInt(rgb[1]) + 0.114 * parseInt(rgb[2]));
+    }
+    
+    // 初始检测
+    detectBackgroundBrightness();
+    
+    // 对于无背景图片的文章，也应用同样的处理
+    const container = document.querySelector('.container.mt-4');
+    if (container) {
+        container.classList.add('light-bg'); // 默认使用浅色背景处理
+    }
+});
+</script>
 {% endblock %}
 
 {% block extra_js %}

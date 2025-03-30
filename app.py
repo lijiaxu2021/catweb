@@ -43,6 +43,7 @@ import json
 import pytz
 from urllib.parse import urlparse, urljoin
 from sqlalchemy import text
+import traceback
 
 # 定义缺失的东八区时区常量和获取函数
 # 添加在文件顶部导入之后
@@ -456,8 +457,8 @@ def post(slug):
         post.views += 1
         db.session.commit()
         
-        # 收集评论信息
-        comments = Comment.query.filter_by(post_id=post.id).all()
+        # 收集评论信息 - 修改为按时间正序排列，且包含子评论
+        comments = Comment.query.filter_by(post_id=post.id).order_by(Comment.created_at.asc()).all()
         
         # 检查点赞状态
         is_liked = False
@@ -1345,15 +1346,92 @@ def delete_post(id):
 @app.route('/post/<slug>/comment', methods=['POST'])
 @login_required
 def add_comment(slug):
-    flash('评论功能暂时关闭，稍后恢复', 'info')
-    return redirect(url_for('post', slug=slug))
+    try:
+        # 获取文章
+        post = Post.query.filter_by(slug=slug).first_or_404()
+        content = request.form.get('content')
+        
+        # 打印调试信息
+        app.logger.info(f"收到评论请求 - 文章: {post.title}, 内容: {content[:20]}...")
+        
+        # 验证内容
+        if not content or content.strip() == '':
+            flash('评论内容不能为空', 'danger')
+            return redirect(url_for('post', slug=slug))
+        
+        # 创建评论
+        comment = Comment(
+            content=content,
+            user_id=current_user.id,
+            post_id=post.id,
+            approved=True  # 默认批准评论
+        )
+        
+        # 处理回复功能
+        parent_id = request.form.get('parent_id')
+        if parent_id and parent_id.strip():
+            try:
+                comment.parent_id = int(parent_id)
+                app.logger.info(f"这是一条回复评论，父评论ID: {parent_id}")
+            except (ValueError, TypeError) as e:
+                app.logger.error(f"处理父评论ID时出错: {str(e)}")
+                # 忽略无效的parent_id
+                pass
+        
+        # 保存评论
+        app.logger.info(f"正在保存评论...")
+        db.session.add(comment)
+        db.session.commit()
+        app.logger.info(f"评论已保存，ID: {comment.id}")
+        
+        # 添加通知（如果不是自己评论自己的文章）
+        if post.author_id != current_user.id:
+            notification = Notification(
+                recipient_id=post.author_id,
+                sender_id=current_user.id,
+                type='comment',
+                message=f'{current_user.username} 评论了你的文章 "{post.title}"',
+                link=url_for('post', slug=slug, _anchor=f'comment-{comment.id}')
+            )
+            db.session.add(notification)
+            db.session.commit()
+            app.logger.info(f"已发送通知给作者")
+        
+        flash('评论已发布', 'success')
+        # 重定向到评论位置
+        return redirect(url_for('post', slug=slug, _anchor=f'comment-{comment.id}'))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"添加评论失败: {str(e)}")
+        app.logger.error(f"错误详情: {traceback.format_exc()}")  # 需要在文件顶部导入 import traceback
+        flash(f'发布评论失败: {str(e)}', 'danger')
+        return redirect(url_for('post', slug=slug))
 
 # 删除评论
 @app.route('/comment/<int:comment_id>/delete', methods=['POST'])
 @login_required
 def delete_comment(comment_id):
-    flash('评论功能暂时关闭，稍后恢复', 'info')
-    return redirect(url_for('index'))
+    try:
+        comment = Comment.query.get_or_404(comment_id)
+        post = Post.query.get_or_404(comment.post_id)
+        
+        # 检查权限 - 只有评论作者或管理员才能删除评论
+        if comment.user_id != current_user.id and not current_user.is_admin:
+            flash('您没有权限删除此评论', 'danger')
+            return redirect(url_for('post', slug=post.slug))
+        
+        # 删除评论
+        db.session.delete(comment)
+        db.session.commit()
+        flash('评论已删除', 'success')
+        
+        return redirect(url_for('post', slug=post.slug))
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"删除评论失败: {str(e)}")
+        flash(f'删除评论失败: {str(e)}', 'danger')
+        return redirect(url_for('index'))
 
 # 添加CSRF令牌到模板上下文
 @app.context_processor
