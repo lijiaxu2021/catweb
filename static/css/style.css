@@ -1011,9 +1011,41 @@ p, h1, h2, h3, h4, h5, h6, .card-text {
 
 /* 文章卡片发牌动画 */
 .post-card {
-    opacity: 0;
-    transform: translateY(30px) rotate(2deg);
-    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-bottom: 1rem;
+    transition: transform 0.2s;
+}
+
+.post-card .card-body {
+    padding: 1rem;
+}
+
+.post-card .card-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.post-card .card-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.post-card .card-footer {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+}
+
+/* 文章元数据更紧凑 */
+.post-meta {
+    font-size: 0.8rem;
+}
+
+/* 标签更紧凑 */
+.post-tags .badge {
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
 }
 
 /* 滚动动画容器 */

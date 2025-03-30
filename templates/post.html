@@ -436,11 +436,13 @@
                         <div class="d-flex align-items-center flex-wrap">
                             <span class="author-name">{{ post.author.username }}</span>
                             <!-- 显示所有佩戴称号 -->
-                            {% for title in post.author.get_wearing_titles() %}
-                                <span class="badge ms-1" style="background-color: {{ title.color }};">
-                                    {{ title.name }}
-                                </span>
-                            {% endfor %}
+                            {% if post.author.get_wearing_titles() %}
+                                {% for title in post.author.get_wearing_titles() %}
+                                    <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                        {{ title.name }}
+                                    </span>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                         <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                     </div>
@@ -463,11 +465,13 @@
                                     <div class="d-flex align-items-center flex-wrap">
                                         <span class="author-name">{{ post.author.username }}</span>
                                         <!-- 显示所有佩戴称号 -->
-                                        {% for title in post.author.get_wearing_titles() %}
-                                            <span class="badge ms-1" style="background-color: {{ title.color }};">
-                                                {{ title.name }}
-                                            </span>
-                                        {% endfor %}
+                                        {% if post.author.get_wearing_titles() %}
+                                            {% for title in post.author.get_wearing_titles() %}
+                                                <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                    {{ title.name }}
+                                                </span>
+                                            {% endfor %}
+                                        {% endif %}
                                     </div>
                                     <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                                 </div>
@@ -483,7 +487,7 @@
                 
                 {% if post.featured_image and post.featured_image != 'default_post.jpg' %}
                 <div class="post-featured-image text-center mb-4">
-                    <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                    <img src="{{ url_for('static', filename='uploads/' + (post.featured_image or 'default_post.jpg')) }}" 
                          alt="{{ post.title }}" class="img-fluid rounded shadow-sm">
                 </div>
                 {% endif %}
@@ -534,11 +538,13 @@
                                     <div class="d-flex align-items-center flex-wrap">
                                         <span class="author-name">{{ post.author.username }}</span>
                                         <!-- 显示所有佩戴称号 -->
-                                        {% for title in post.author.get_wearing_titles() %}
-                                            <span class="badge ms-1" style="background-color: {{ title.color }};">
-                                                {{ title.name }}
-                                            </span>
-                                        {% endfor %}
+                                        {% if post.author.get_wearing_titles() %}
+                                            {% for title in post.author.get_wearing_titles() %}
+                                                <span class="badge ms-1" style="background-color: {{ title.color }};">
+                                                    {{ title.name }}
+                                                </span>
+                                            {% endfor %}
+                                        {% endif %}
                             </div>
                                     <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                             </div>
@@ -549,17 +555,19 @@
                     </div>
                     
                     <div class="d-flex flex-wrap my-3">
-                        {% for tag in post.tags %}
-                        <a href="{{ url_for('tag', slug=tag.slug) }}" class="badge bg-light text-dark text-decoration-none me-2 mb-2 px-3 py-2 rounded-pill">
-                            # {{ tag.name }}
-                        </a>
-                        {% endfor %}
+                        {% if post.tags %}
+                            {% for tag in post.tags %}
+                            <a href="{{ url_for('tag', slug=tag.slug) }}" class="badge bg-light text-dark text-decoration-none me-2 mb-2 px-3 py-2 rounded-pill">
+                                # {{ tag.name }}
+                            </a>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
                 
                 {% if post.featured_image and post.featured_image != 'default_post.jpg' %}
                 <div class="post-featured-image text-center mb-4">
-                    <img src="{{ url_for('static', filename='uploads/' + post.featured_image) }}" 
+                    <img src="{{ url_for('static', filename='uploads/' + (post.featured_image or 'default_post.jpg')) }}" 
                          alt="{{ post.title }}" class="img-fluid rounded shadow-sm">
                 </div>
                 {% endif %}

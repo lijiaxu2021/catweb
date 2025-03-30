@@ -445,16 +445,29 @@ def post(slug):
     try:
         post = Post.query.filter_by(slug=slug).first_or_404()
         
+        # 检查并设置默认值以避免None值错误
+        if post.featured_image is None:
+            post.featured_image = 'default_post.jpg'
+            
+        if post.background_image is None:
+            post.background_image = ''
+            
         # 增加浏览量
         post.views += 1
         db.session.commit()
         
-        # 简化版,暂时不取评论和点赞信息
+        # 收集评论信息
+        comments = Comment.query.filter_by(post_id=post.id).all()
+        
+        # 检查点赞状态
+        is_liked = False
+        likes_count = 0
+        
         return render_template('post.html', 
                               post=post, 
-                              comments=[], 
-                              likes_count=0, 
-                              is_liked=False)
+                              comments=comments, 
+                              likes_count=likes_count, 
+                              is_liked=is_liked)
     except Exception as e:
         app.logger.error(f"访问文章页面出错: {str(e)}")
         return f"文章访问错误: {str(e)}", 500

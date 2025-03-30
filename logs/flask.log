@@ -50,3 +50,8 @@
 2025-03-30 09:23:15,922 ERROR: 访问文章页面出错: Could not build url for endpoint 'add_comment' with values ['post_id']. Did you forget to specify values ['slug']? [in G:\test111 25.3.291449\app.py:459]
 2025-03-30 09:24:53,019 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
 2025-03-30 09:24:54,918 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-30 09:44:58,477 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-30 09:45:00,670 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
+2025-03-30 09:46:02,504 ERROR: 访问文章页面出错: can only concatenate str (not "NoneType") to str [in G:\test111 25.3.291449\app.py:459]
+2025-03-30 09:46:37,790 ERROR: 访问文章页面出错: can only concatenate str (not "NoneType") to str [in G:\test111 25.3.291449\app.py:459]
+2025-03-30 09:47:23,402 INFO: 博客应用启动 [in G:\test111 25.3.291449\app.py:115]
