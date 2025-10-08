@@ -9,8 +9,8 @@ WTForms==3.0.1
 python-slugify==8.0.1
 Pillow==10.0.1
 beautifulsoup4==4.12.2
-psutil==5.9.5
-pytz==2023.3
+psutil
+pytz==
 markupsafe==2.1.3
 blinker==1.6.2
 email-validator==2.0.0
